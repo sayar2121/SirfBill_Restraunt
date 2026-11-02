@@ -31,7 +31,7 @@ class AppUpdateInfo {
 }
 
 class WindowsAutoUpdater {
-  static const String githubRepo = 'naiyo-24/SirfBill_Printer';
+  static const String githubRepo = 'sayar2121/SirfBill_Restraunt';
 
   static Future<AppUpdateInfo?> checkForUpdate() async {
     // Updates and .exe installer downloads are only applicable for Windows desktop
