@@ -83,6 +83,7 @@ jobs:
             $tagName = "v1.0.0"
           }
           $cleanVersion = $tagName.TrimStart('v')
+          echo "RELEASE_TAG=$tagName" >> $env:GITHUB_ENV
 
           # Generate manifest.json
           $manifestContent = @"
@@ -108,6 +109,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             Sirfbill_Restaurant_Setup.exe
             app-update.zip
