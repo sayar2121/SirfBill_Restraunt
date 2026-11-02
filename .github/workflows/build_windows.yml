@@ -12,6 +12,8 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: v1.0.0
 
     steps:
       - name: Checkout Code
