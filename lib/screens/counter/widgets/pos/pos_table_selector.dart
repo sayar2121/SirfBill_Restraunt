@@ -1,0 +1,296 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../models/restaurant_pos_models.dart';
+
+class PosTableSelector extends StatelessWidget {
+  final String selectedFloor;
+  final String? selectedTableId;
+  final ValueChanged<String> onSelectFloor;
+  final ValueChanged<String> onSelectTable;
+  final List<DiningTable>? tables;
+  final VoidCallback? onRefresh;
+
+  const PosTableSelector({
+    super.key,
+    required this.selectedFloor,
+    required this.selectedTableId,
+    required this.onSelectFloor,
+    required this.onSelectTable,
+    this.tables,
+    this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    final tableList = tables ?? const [];
+    final floorList = <String>{};
+    for (final t in tableList) {
+      if (t.floor.trim().isNotEmpty) floorList.add(t.floor.trim());
+    }
+    final hasRealFloors = floorList.isNotEmpty;
+    final effectiveFloor = hasRealFloors
+        ? (floorList.contains(selectedFloor) ? selectedFloor : floorList.first)
+        : '';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.3),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black26 : const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: "Table Selection", Floor dropdown, "View Floor Plan"
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.table_restaurant_rounded, size: 20, color: Color(0xFF10B981)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Table Selection',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  if (hasRealFloors) ...[
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        border: Border.all(color: borderColor, width: 1.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: effectiveFloor,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                          items: floorList.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                          onChanged: (val) {
+                            if (val != null) onSelectFloor(val);
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (onRefresh != null) ...[
+                    Tooltip(
+                      message: 'Refresh Tables',
+                      child: InkWell(
+                        onTap: onRefresh,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: borderColor, width: 1.2),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF10B981)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  TextButton.icon(
+                    onPressed: () => context.go('/counter/tables'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      minimumSize: const Size(0, 36),
+                      backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.grid_view_rounded, size: 16, color: Color(0xFF3B82F6)),
+                    label: const Text('Floor Plan', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Table Chips Grid (T1, T2, T3, T4...)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final crossAxisCount = width < 300 ? 3 : 4;
+              // Adjusted child aspect ratio to accommodate content height and avoid overflow
+              final childAspectRatio = width < 320 ? 0.95 : (width < 450 ? 0.98 : 1.15);
+              final floorTables = tableList.where((t) => t.floor == effectiveFloor).toList();
+              final displayList = floorTables.isNotEmpty ? floorTables : tableList;
+
+              if (displayList.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.table_restaurant_outlined, size: 18, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 8),
+                        Text(
+                          'No tables set up yet.',
+                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/counter/tables'),
+                          child: const Text('Add in Floor Plan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: displayList.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: childAspectRatio,
+                ),
+                itemBuilder: (context, index) {
+                  final table = displayList[index];
+                  final isSelected = table.id == selectedTableId;
+                  final isOccupied = table.status == TableStatus.occupied;
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => onSelectTable(table.id),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isOccupied
+                            ? (isSelected
+                                ? const Color(0xFFEF4444)
+                                : (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEF2F2)))
+                            : (isSelected
+                                ? const Color(0xFF10B981)
+                                : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC))),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isOccupied
+                              ? const Color(0xFFEF4444)
+                              : (isSelected ? const Color(0xFF10B981) : borderColor),
+                          width: isSelected ? 2.5 : 1.2,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)).withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              table.label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isOccupied
+                                        ? const Color(0xFFEF4444)
+                                        : (isDark ? Colors.white : const Color(0xFF0F172A))),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Flexible(
+                            child: Text(
+                              '${table.capacity} Seater',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: isSelected
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : (isOccupied ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          if (table.occupiedDuration != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                table.occupiedDuration!,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.white : const Color(0xFFEF4444),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                          else
+                            Text(
+                              isOccupied ? 'Occupied' : 'Empty',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? Colors.white.withValues(alpha: 0.85)
+                                    : (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}

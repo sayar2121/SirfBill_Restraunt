@@ -1,0 +1,115 @@
+name: Build SirfBill Restaurant Windows Release and Auto-Updater
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET SDK (for updater)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter Dependencies
+        run: flutter pub get
+
+      - name: Create .env File
+        shell: pwsh
+        run: |
+          Set-Content -Path ".env" -Value "API_BASE_URL=https://billbackend.naiyo24.com"
+
+      - name: Build Flutter Windows App (Release)
+        shell: pwsh
+        run: |
+          $tagName = "${{ github.ref_name }}"
+          if (-not $tagName -or $tagName -eq "main" -or $tagName -eq "master") {
+            $tagName = "v1.0.0"
+          }
+          $cleanVersion = $tagName.TrimStart('v')
+          flutter build windows --release --build-name=$cleanVersion --build-number=1
+
+      - name: Build Standalone Updater (.NET 8)
+        run: |
+          dotnet publish updater/Updater.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o updater/publish
+
+      - name: Copy Updater into Flutter Release Directory
+        shell: pwsh
+        run: |
+          Copy-Item -Path "updater/publish/updater.exe" -Destination "build/windows/x64/runner/Release/updater.exe" -Force
+
+      - name: Create Zip Package for In-App Auto-Update (app-update.zip)
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "app-update.zip" -Force
+          $hash = (Get-FileHash -Path "app-update.zip" -Algorithm SHA256).Hash.ToLower()
+          echo "SHA256=$hash" >> $env:GITHUB_ENV
+          echo "Package SHA256: $hash"
+
+      - name: Build Inno Setup Installer (.exe)
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: installer/setup.iss
+
+      - name: Rename & Prepare Artifacts
+        shell: pwsh
+        run: |
+          # Detect tag or fallback to version in pubspec
+          $tagName = "${{ github.ref_name }}"
+          if (-not $tagName -or $tagName -eq "main" -or $tagName -eq "master") {
+            $tagName = "v1.0.0"
+          }
+          $cleanVersion = $tagName.TrimStart('v')
+
+          # Generate manifest.json
+          $manifestContent = @"
+          {
+            "product_id": "sirfbill-restaurant-windows",
+            "platform": "windows-x64",
+            "channel": "stable",
+            "version": "$cleanVersion",
+            "mandatory": false,
+            "release_notes": "SirfBill Restaurant Windows Update $tagName",
+            "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
+            "sha256": "$env:SHA256"
+          }
+          "@
+          Set-Content -Path "manifest.json" -Value $manifestContent
+
+          # Rename Setup installer to include tag
+          $installer = Get-ChildItem -Path "installer_output" -Filter "*.exe" | Select-Object -First 1
+          if ($installer) {
+            Move-Item -Path $installer.FullName -Destination "Sirfbill_Restaurant_Setup.exe" -Force
+          }
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Sirfbill_Restaurant_Setup.exe
+            app-update.zip
+            manifest.json
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

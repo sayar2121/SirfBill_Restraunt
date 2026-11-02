@@ -1,0 +1,632 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:dio/dio.dart';
+import '../config/api_client.dart';
+
+class AppUpdateInfo {
+  final String latestVersion;
+  final String downloadUrl;
+  final String releaseNotes;
+  final bool isMandatory;
+
+  AppUpdateInfo({
+    required this.latestVersion,
+    required this.downloadUrl,
+    required this.releaseNotes,
+    this.isMandatory = false,
+  });
+
+  factory AppUpdateInfo.fromJson(Map<String, dynamic> json) {
+    return AppUpdateInfo(
+      latestVersion: json['latest_version'] ?? json['version'] ?? '1.0.0',
+      downloadUrl: json['download_url'] ?? json['url'] ?? '',
+      releaseNotes: json['release_notes'] ?? json['notes'] ?? 'General improvements and bug fixes.',
+      isMandatory: json['is_mandatory'] ?? json['mandatory'] ?? false,
+    );
+  }
+}
+
+class WindowsAutoUpdater {
+  static const String githubRepo = 'naiyo-24/SirfBill_Printer';
+
+  static Future<AppUpdateInfo?> checkForUpdate() async {
+    // Updates and .exe installer downloads are only applicable for Windows desktop
+    if (kIsWeb || !Platform.isWindows) {
+      return null;
+    }
+
+    try {
+      // 1. Try Backend API endpoint first (/api/app-version)
+      try {
+        final response = await ApiClient().dio.get('/api/app-version');
+        if (response.statusCode == 200 && response.data != null) {
+          final data = Map<String, dynamic>.from(response.data);
+          final updateInfo = AppUpdateInfo.fromJson(data);
+          final packageInfo = await PackageInfo.fromPlatform();
+          if (_isNewerVersion(packageInfo.version, updateInfo.latestVersion)) {
+            return updateInfo;
+          }
+          // If backend responded with valid version data and already up-to-date
+          return null;
+        }
+      } catch (e) {
+        debugPrint('Backend app-version check skipped or not yet ready: $e');
+      }
+
+      // 2. Direct GitHub Releases fallback
+      final ghResponse = await Dio().get(
+        'https://api.github.com/repos/$githubRepo/releases/latest',
+        options: Options(
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'SirfBill-Updater',
+          },
+        ),
+      );
+
+      if (ghResponse.statusCode == 200 && ghResponse.data != null) {
+        final data = ghResponse.data;
+        final tagName = (data['tag_name'] ?? '').toString().replaceAll('v', '').trim();
+        final body = (data['body'] ?? 'New release available.').toString();
+        
+        final assets = data['assets'] as List? ?? [];
+        String downloadUrl = '';
+        for (var asset in assets) {
+          final name = (asset['name'] ?? '').toString().toLowerCase();
+          if (name.endsWith('.exe')) {
+            downloadUrl = asset['browser_download_url'] ?? '';
+            break;
+          }
+        }
+
+        if (downloadUrl.isNotEmpty && tagName.isNotEmpty) {
+          final packageInfo = await PackageInfo.fromPlatform();
+          if (_isNewerVersion(packageInfo.version, tagName)) {
+            return AppUpdateInfo(
+              latestVersion: tagName,
+              downloadUrl: downloadUrl,
+              releaseNotes: body,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Update check skipped or failed: $e');
+    }
+    return null;
+  }
+
+  static bool _isNewerVersion(String current, String latest) {
+    try {
+      final cParts = current.split('+')[0].split('.').map(int.parse).toList();
+      final lParts = latest.split('+')[0].split('.').map(int.parse).toList();
+
+      for (int i = 0; i < 3; i++) {
+        final c = i < cParts.length ? cParts[i] : 0;
+        final l = i < lParts.length ? lParts[i] : 0;
+        if (l > c) return true;
+        if (l < c) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  static bool _isDialogShowing = false;
+
+  /// Checks for updates and automatically displays the dialog if an update is found.
+  /// Safe to call multiple times (guards against opening duplicate dialogs).
+  static Future<void> checkAndShowUpdateIfAvailable(BuildContext context) async {
+    try {
+      if (_isDialogShowing) return;
+      final updateInfo = await checkForUpdate();
+      if (updateInfo != null && context.mounted && !_isDialogShowing) {
+        await showUpdateDialog(context, updateInfo);
+      }
+    } catch (e) {
+      debugPrint('Auto-update check encountered error: $e');
+    }
+  }
+
+  static Future<void> showUpdateDialog(BuildContext context, AppUpdateInfo info) async {
+    if (_isDialogShowing) return;
+    _isDialogShowing = true;
+    try {
+      return await showDialog<void>(
+        context: context,
+        barrierDismissible: !info.isMandatory,
+        builder: (ctx) => _UpdateDialog(info: info),
+      );
+    } finally {
+      _isDialogShowing = false;
+    }
+  }
+}
+
+class _UpdateDialog extends StatefulWidget {
+  final AppUpdateInfo info;
+  const _UpdateDialog({required this.info});
+
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  bool _isDownloading = false;
+  double _progress = 0.0;
+  String _statusText = '';
+
+  Future<void> _startDownloadAndInstall() async {
+    if (widget.info.downloadUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download URL is empty!')),
+      );
+      return;
+    }
+
+    // On Windows desktop, download the installer and launch it
+    if (!kIsWeb && Platform.isWindows) {
+      setState(() {
+        _isDownloading = true;
+        _progress = 0.0;
+        _statusText = 'Downloading update installer...';
+      });
+
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final isZip = widget.info.downloadUrl.toLowerCase().endsWith('.zip');
+        final fileExtension = isZip ? 'zip' : 'exe';
+        final filePath = '${tempDir.path}\\app-update.$fileExtension';
+
+        await ApiClient().dio.download(
+          widget.info.downloadUrl,
+          filePath,
+          onReceiveProgress: (received, total) {
+            if (total != -1) {
+              setState(() {
+                _progress = received / total;
+                _statusText = 'Downloading: ${(_progress * 100).toStringAsFixed(0)}%';
+              });
+            }
+          },
+        );
+
+        setState(() {
+          _statusText = 'Starting update...';
+        });
+
+        final app = File(Platform.resolvedExecutable);
+
+        if (isZip) {
+          // Launch standalone updater.exe to replace running files with backup & rollback
+          final updaterFile = File('${app.parent.path}\\updater.exe');
+          if (await updaterFile.exists()) {
+            await Process.start(
+              updaterFile.path,
+              [
+                '--wait-pid', '$pid',
+                '--install-dir', app.parent.path,
+                '--package', filePath,
+                '--restart-exe', app.path,
+              ],
+              mode: ProcessStartMode.detached,
+            );
+            exit(0);
+          }
+        }
+
+        // Direct installer fallback
+        await Process.start(filePath, [], runInShell: true, mode: ProcessStartMode.detached);
+        exit(0);
+      } catch (e) {
+        setState(() {
+          _isDownloading = false;
+          _statusText = 'Error downloading update: $e';
+        });
+      }
+    } else {
+      // Fallback: open download URL in browser
+      final uri = Uri.parse(widget.info.downloadUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const primaryColor = Color(0xFF166534);
+    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    final parsedItems = _parseReleaseNotes(widget.info.releaseNotes);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 680),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header Banner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryColor,
+                    Color(0xFF15803D),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'What\'s New',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'v${widget.info.latestVersion}',
+                                style: const TextStyle(
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'A fresh update is ready to supercharge your billing.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!widget.info.isMandatory && !_isDownloading)
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Dismiss',
+                    ),
+                ],
+              ),
+            ),
+
+            // Content Area
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Highlights header
+                    Row(
+                      children: [
+                        const Icon(Icons.stars_rounded, color: primaryColor, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Release Highlights',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Feature / Highlights cards
+                    ...parsedItems.map((item) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 2),
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: item.color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(item.icon, color: item.color, size: 16),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        item.category,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                          color: item.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  if (item.description.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      item.description,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+
+                    if (_isDownloading) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _statusText,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                                Text(
+                                  '${(_progress * 100).toStringAsFixed(0)}%',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: _progress > 0 ? _progress : null,
+                                backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                                valueColor: const AlwaysStoppedAnimation<Color>(primaryColor),
+                                minHeight: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            // Footer / Actions
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                border: Border(top: BorderSide(color: borderColor)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: _isDownloading
+                    ? [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Applying update, please wait...',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ]
+                    : [
+                        if (!widget.info.isMandatory)
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Maybe Later', style: TextStyle(color: Colors.grey)),
+                          ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.download_done_rounded, size: 18),
+                          label: const Text('Update & Restart Now'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          ),
+                          onPressed: _startDownloadAndInstall,
+                        ),
+                      ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<_ReleaseHighlight> _parseReleaseNotes(String rawNotes) {
+    if (rawNotes.isEmpty || rawNotes.contains('compare/')) {
+      return [
+        _ReleaseHighlight(
+          category: 'BILLING & INVOICING',
+          title: 'Directly Editable Unit Price & GST Rates',
+          description: 'Modify prices or custom GST percentages on-the-fly directly inside the billing cart table.',
+          icon: Icons.edit_note_rounded,
+          color: const Color(0xFF2563EB),
+        ),
+        _ReleaseHighlight(
+          category: 'TIMEZONE ACCURACY',
+          title: 'Local Time & Real-time History Sync',
+          description: 'Timestamps accurately reflect your local system time across History, Accounts, and Customers.',
+          icon: Icons.schedule_rounded,
+          color: const Color(0xFF059669),
+        ),
+        _ReleaseHighlight(
+          category: 'CUSTOMIZATION',
+          title: 'Company Logo & Custom QR Code Uploads',
+          description: 'Upload your shop branding with automatic preview and receipt integration.',
+          icon: Icons.qr_code_2_rounded,
+          color: const Color(0xFF7C3AED),
+        ),
+        _ReleaseHighlight(
+          category: 'STABILITY & UPDATES',
+          title: '1-Click Silent Auto-Updater',
+          description: 'Fast background download and automated restart with safe installation.',
+          icon: Icons.bolt_rounded,
+          color: const Color(0xFFEA580C),
+        ),
+      ];
+    }
+
+    final lines = rawNotes.split('\n');
+    final List<_ReleaseHighlight> items = [];
+
+    for (var line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+      
+      String text = trimmed.replaceAll(RegExp(r'^[\*\-\•]\s*'), '').trim();
+      if (text.isEmpty) continue;
+
+      IconData icon = Icons.check_circle_outline_rounded;
+      Color color = const Color(0xFF166534);
+      String category = 'IMPROVEMENT';
+
+      final lower = text.toLowerCase();
+      if (lower.contains('fix') || lower.contains('bug') || lower.contains('resolve')) {
+        icon = Icons.bug_report_outlined;
+        color = const Color(0xFFDC2626);
+        category = 'BUG FIX';
+      } else if (lower.contains('feat') || lower.contains('new') || lower.contains('add')) {
+        icon = Icons.new_releases_outlined;
+        color = const Color(0xFF2563EB);
+        category = 'NEW FEATURE';
+      } else if (lower.contains('speed') || lower.contains('fast') || lower.contains('perf')) {
+        icon = Icons.speed_rounded;
+        color = const Color(0xFFD97706);
+        category = 'PERFORMANCE';
+      }
+
+      items.add(
+        _ReleaseHighlight(
+          category: category,
+          title: text,
+          description: '',
+          icon: icon,
+          color: color,
+        ),
+      );
+    }
+
+    if (items.isEmpty) {
+      return [
+        _ReleaseHighlight(
+          category: 'ENHANCEMENT',
+          title: 'General performance improvements and stability fixes',
+          description: 'Contains key optimizations for daily operations.',
+          icon: Icons.check_circle_outline_rounded,
+          color: const Color(0xFF166534),
+        )
+      ];
+    }
+
+    return items;
+  }
+}
+
+class _ReleaseHighlight {
+  final String category;
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+
+  _ReleaseHighlight({
+    required this.category,
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+  });
+}
+
