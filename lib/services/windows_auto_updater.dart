@@ -40,9 +40,61 @@ class WindowsAutoUpdater {
     }
 
     try {
-      // 1. Try Backend API endpoint first (/api/app-version)
+      // 1. Direct GitHub Releases check (with short 5-second timeout)
       try {
-        final response = await ApiClient().dio.get('/api/app-version');
+        final ghResponse = await Dio().get(
+          'https://api.github.com/repos/$githubRepo/releases/latest',
+          options: Options(
+            sendTimeout: const Duration(seconds: 5),
+            receiveTimeout: const Duration(seconds: 5),
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'SirfBill-Updater',
+            },
+          ),
+        );
+
+        if (ghResponse.statusCode == 200 && ghResponse.data != null) {
+          final data = ghResponse.data;
+          final tagName = (data['tag_name'] ?? '').toString().replaceAll('v', '').trim();
+          final body = (data['body'] ?? 'New release available.').toString();
+
+          final assets = data['assets'] as List? ?? [];
+          String downloadUrl = '';
+          for (var asset in assets) {
+            final name = (asset['name'] ?? '').toString().toLowerCase();
+            if (name.endsWith('.exe')) {
+              downloadUrl = asset['browser_download_url'] ?? '';
+              break;
+            }
+          }
+
+          if (downloadUrl.isNotEmpty && tagName.isNotEmpty) {
+            final packageInfo = await PackageInfo.fromPlatform();
+            debugPrint('[AutoUpdater] Current version: ${packageInfo.version}, Latest GitHub: $tagName');
+            if (_isNewerVersion(packageInfo.version, tagName)) {
+              return AppUpdateInfo(
+                latestVersion: tagName,
+                downloadUrl: downloadUrl,
+                releaseNotes: body,
+              );
+            }
+            return null; // Already up-to-date
+          }
+        }
+      } catch (e) {
+        debugPrint('[AutoUpdater] GitHub release check error: $e');
+      }
+
+      // 2. Secondary Backend API endpoint check (/api/app-version)
+      try {
+        final response = await ApiClient().dio.get(
+          '/api/app-version',
+          options: Options(
+            sendTimeout: const Duration(seconds: 3),
+            receiveTimeout: const Duration(seconds: 3),
+          ),
+        );
         if (response.statusCode == 200 && response.data != null) {
           final data = Map<String, dynamic>.from(response.data);
           final updateInfo = AppUpdateInfo.fromJson(data);
@@ -50,52 +102,13 @@ class WindowsAutoUpdater {
           if (_isNewerVersion(packageInfo.version, updateInfo.latestVersion)) {
             return updateInfo;
           }
-          // If backend responded with valid version data and already up-to-date
           return null;
         }
       } catch (e) {
-        debugPrint('Backend app-version check skipped or not yet ready: $e');
-      }
-
-      // 2. Direct GitHub Releases fallback
-      final ghResponse = await Dio().get(
-        'https://api.github.com/repos/$githubRepo/releases/latest',
-        options: Options(
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'SirfBill-Updater',
-          },
-        ),
-      );
-
-      if (ghResponse.statusCode == 200 && ghResponse.data != null) {
-        final data = ghResponse.data;
-        final tagName = (data['tag_name'] ?? '').toString().replaceAll('v', '').trim();
-        final body = (data['body'] ?? 'New release available.').toString();
-        
-        final assets = data['assets'] as List? ?? [];
-        String downloadUrl = '';
-        for (var asset in assets) {
-          final name = (asset['name'] ?? '').toString().toLowerCase();
-          if (name.endsWith('.exe')) {
-            downloadUrl = asset['browser_download_url'] ?? '';
-            break;
-          }
-        }
-
-        if (downloadUrl.isNotEmpty && tagName.isNotEmpty) {
-          final packageInfo = await PackageInfo.fromPlatform();
-          if (_isNewerVersion(packageInfo.version, tagName)) {
-            return AppUpdateInfo(
-              latestVersion: tagName,
-              downloadUrl: downloadUrl,
-              releaseNotes: body,
-            );
-          }
-        }
+        debugPrint('[AutoUpdater] Backend app-version check skipped: $e');
       }
     } catch (e) {
-      debugPrint('Update check skipped or failed: $e');
+      debugPrint('[AutoUpdater] Update check failed: $e');
     }
     return null;
   }
@@ -181,7 +194,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         final fileExtension = isZip ? 'zip' : 'exe';
         final filePath = '${tempDir.path}\\app-update.$fileExtension';
 
-        await ApiClient().dio.download(
+        await Dio().download(
           widget.info.downloadUrl,
           filePath,
           onReceiveProgress: (received, total) {

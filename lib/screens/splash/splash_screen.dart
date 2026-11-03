@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../router/app_router.dart' as import_router;
 import '../../themes/app_colors.dart';
 import '../../services/windows_auto_updater.dart';
 
@@ -24,21 +25,18 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
 
-    // Check for updates automatically in the background ONLY on Windows desktop
-    if (!kIsWeb && Platform.isWindows) {
-      try {
-        final updateInfo = await WindowsAutoUpdater.checkForUpdate();
-        if (updateInfo != null && mounted) {
-          // Show update dialog directly
-          await WindowsAutoUpdater.showUpdateDialog(context, updateInfo);
-        }
-      } catch (e) {
-        debugPrint('Update check during splash failed or skipped: $e');
-      }
-    }
-
     if (mounted) {
       context.go('/dashboard');
+    }
+
+    // Check for updates automatically right after dashboard mounts ONLY on Windows desktop
+    if (!kIsWeb && Platform.isWindows) {
+      Future.delayed(const Duration(milliseconds: 600), () {
+        final currentContext = import_router.goRouter.routerDelegate.navigatorKey.currentContext;
+        if (currentContext != null && currentContext.mounted) {
+          WindowsAutoUpdater.checkAndShowUpdateIfAvailable(currentContext);
+        }
+      });
     }
   }
 

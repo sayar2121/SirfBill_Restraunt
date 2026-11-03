@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +14,7 @@ import '../../providers/restaurant_table_provider.dart';
 import '../../services/restaurant_pos_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/shop_settings_service.dart';
+import '../../services/windows_auto_updater.dart';
 import 'widgets/pos/pos_cart_panel.dart';
 import 'widgets/pos/pos_menu_section.dart';
 import 'widgets/pos/pos_top_bar.dart';
@@ -40,6 +43,9 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(customerProvider.notifier).loadCustomers();
       ref.read(restaurantOrderProvider.notifier).loadOrders();
+      if (!kIsWeb && Platform.isWindows) {
+        WindowsAutoUpdater.checkAndShowUpdateIfAvailable(context);
+      }
     });
     // Live table occupancy ticker - updates table occupancy timers smoothly every 15 seconds
     _occupancyTimer = Timer.periodic(const Duration(seconds: 15), (_) {
