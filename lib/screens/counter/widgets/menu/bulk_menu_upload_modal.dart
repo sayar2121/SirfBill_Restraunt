@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:excel/excel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../services/restaurant_pos_service.dart';
 import '../../../../services/shop_service.dart';
@@ -90,6 +94,60 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
     }
   }
 
+  Uint8List _generateFallbackMenuExcel() {
+    final excel = Excel.createExcel();
+    final sheet = excel['Menu Template'];
+    excel.setDefaultSheet('Menu Template');
+
+    sheet.appendRow([
+      TextCellValue('Item Name'),
+      TextCellValue('Category'),
+      TextCellValue('Price'),
+      TextCellValue('Food Type'),
+      TextCellValue('Short Code'),
+      TextCellValue('Description'),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue('Chicken Biryani'),
+      TextCellValue('Biryani & Rice'),
+      DoubleCellValue(350.0),
+      TextCellValue('NON_VEG'),
+      TextCellValue('CB'),
+      TextCellValue('Aromatic basmati rice cooked with chicken pieces and spices'),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue('Paneer Tikka'),
+      TextCellValue('Tandoor & Starters'),
+      DoubleCellValue(260.0),
+      TextCellValue('VEG'),
+      TextCellValue('PT'),
+      TextCellValue('Grilled cottage cheese marinated in spiced yogurt'),
+    ]);
+
+    sheet.appendRow([
+      TextCellValue('Butter Naan'),
+      TextCellValue('Breads'),
+      DoubleCellValue(45.0),
+      TextCellValue('VEG'),
+      TextCellValue('BN'),
+      TextCellValue('Fresh tandoori bread coated with butter'),
+    ]);
+
+    final encoded = excel.encode();
+    return Uint8List.fromList(encoded ?? []);
+  }
+
+  Uint8List _generateFallbackMenuCSV() {
+    final buffer = StringBuffer();
+    buffer.writeln('Item Name,Category,Price,Food Type,Short Code,Description');
+    buffer.writeln('"Chicken Biryani","Biryani & Rice",350.0,"NON_VEG","CB","Aromatic basmati rice cooked with chicken"');
+    buffer.writeln('"Paneer Tikka","Tandoor & Starters",260.0,"VEG","PT","Grilled cottage cheese marinated in spiced yogurt"');
+    buffer.writeln('"Butter Naan","Breads",45.0,"VEG","BN","Fresh tandoori bread coated with butter"');
+    return Uint8List.fromList(utf8.encode(buffer.toString()));
+  }
+
   Future<void> _downloadTemplate({bool isExcel = true}) async {
     setState(() => _isDownloading = true);
     try {
@@ -98,25 +156,75 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
       final cleanName = _targetOutletName.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_').toLowerCase();
       final filename = 'menu_template_$cleanName';
 
-      final bytes = await RestaurantPosService.downloadSampleMenuTemplate(
-        outletId: _targetOutletId,
-        format: ext,
-      );
+      List<int> bytes;
+      try {
+        bytes = await RestaurantPosService.downloadSampleMenuTemplate(
+          outletId: _targetOutletId,
+          format: ext,
+        );
+      } catch (e) {
+        debugPrint('Backend template download failed ($e). Using instant client-generated template.');
+        bytes = isExcel ? _generateFallbackMenuExcel() : _generateFallbackMenuCSV();
+      }
 
-      await FileSaver.instance.saveAs(
-        name: filename,
-        bytes: Uint8List.fromList(bytes),
-        fileExtension: ext,
-        mimeType: mime,
-      );
+      if (bytes.isEmpty) {
+        bytes = isExcel ? _generateFallbackMenuExcel() : _generateFallbackMenuCSV();
+      }
+
+      final uint8Bytes = Uint8List.fromList(bytes);
+
+      // Attempt 1: FileSaver saveAs (dialog)
+      bool saved = false;
+      String? savedLocation;
+      try {
+        final res = await FileSaver.instance.saveAs(
+          name: filename,
+          bytes: uint8Bytes,
+          fileExtension: ext,
+          mimeType: mime,
+        );
+        if (res != null && res.isNotEmpty) {
+          saved = true;
+          savedLocation = res;
+        }
+      } catch (e) {
+        debugPrint('saveAs threw error on desktop: $e');
+      }
+
+      // Attempt 2: Direct file write to Downloads directory on Desktop (Windows / macOS)
+      if (!saved && !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+        try {
+          final downloadsDir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+          final targetFile = File('${downloadsDir.path}${Platform.pathSeparator}$filename.$ext');
+          await targetFile.writeAsBytes(uint8Bytes);
+          saved = true;
+          savedLocation = targetFile.path;
+        } catch (e) {
+          debugPrint('Direct desktop file write failed: $e');
+        }
+      }
+
+      // Attempt 3: FileSaver saveFile (auto save)
+      if (!saved) {
+        savedLocation = await FileSaver.instance.saveFile(
+          name: filename,
+          bytes: uint8Bytes,
+          ext: ext,
+          mimeType: mime,
+        );
+        saved = true;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Downloaded template for "$_targetOutletName" with Category & Type dropdowns! (.$ext)',
+              savedLocation != null && savedLocation.isNotEmpty
+                  ? 'Template saved to: $savedLocation'
+                  : 'Downloaded menu template (.$ext) to your Downloads folder!',
             ),
             backgroundColor: const Color(0xFF10B981),
+            duration: const Duration(seconds: 4),
           ),
         );
       }

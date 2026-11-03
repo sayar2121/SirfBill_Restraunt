@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:excel/excel.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -9,21 +12,50 @@ import 'shop_settings_service.dart';
 import '../config/api_constants.dart';
 
 class ExportService {
-  static Future<void> _exportOrShare(String filename, Uint8List bytes, String ext, MimeType mimeType) async {
-    await FileSaver.instance.saveAs(
+  static Future<String> _exportOrShare(String filename, Uint8List bytes, String ext, MimeType mimeType) async {
+    try {
+      final savedPath = await FileSaver.instance.saveAs(
+        name: filename,
+        bytes: bytes,
+        fileExtension: ext,
+        mimeType: mimeType,
+      );
+      if (savedPath != null && savedPath.isNotEmpty) {
+        return savedPath;
+      }
+    } catch (e) {
+      debugPrint('Warning: FileSaver.saveAs failed on desktop: $e. Falling back to direct filesystem save.');
+    }
+
+    // Desktop direct filesystem save fallback
+    if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+      try {
+        final downloadsDir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+        final filePath = '${downloadsDir.path}${Platform.pathSeparator}$filename.$ext';
+        final file = File(filePath);
+        await file.writeAsBytes(bytes);
+        return filePath;
+      } catch (e) {
+        debugPrint('Fallback saving to downloads failed: $e');
+      }
+    }
+
+    // Default FileSaver saveFile fallback (auto-saves to Downloads)
+    return await FileSaver.instance.saveFile(
       name: filename,
       bytes: bytes,
-      fileExtension: ext,
+      ext: ext,
       mimeType: mimeType,
     );
   }
-  static Future<void> exportHeadersToCSV(
+
+  static Future<String> exportHeadersToCSV(
     List<String> headers,
     String filename,
   ) async {
     final csv = '${headers.join(',')}\n';
     final bytes = Uint8List.fromList(utf8.encode(csv));
-    await _exportOrShare(filename, bytes, 'csv', MimeType.csv);
+    return await _exportOrShare(filename, bytes, 'csv', MimeType.csv);
   }
 
   static Future<void> exportToCSV(

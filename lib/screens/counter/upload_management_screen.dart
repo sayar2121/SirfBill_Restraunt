@@ -151,14 +151,18 @@ class _UploadManagementScreenState
       'Distributor',
       'HSN Code',
     ];
-    await ExportService.exportHeadersToCSV(
+    final savedPath = await ExportService.exportHeadersToCSV(
       templateHeaders,
       'inventory_upload_template',
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Blank template downloaded successfully!'),
+        SnackBar(
+          content: Text(
+            savedPath.isNotEmpty
+                ? 'Blank template saved to: $savedPath'
+                : 'Blank template downloaded successfully!',
+          ),
           backgroundColor: Colors.green,
         ),
       );
