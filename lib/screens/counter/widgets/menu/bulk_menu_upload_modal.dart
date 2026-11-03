@@ -250,9 +250,21 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
     setState(() => _isLoading = true);
 
     try {
+      Uint8List? fileBytes = _selectedFile!.bytes;
+      if (fileBytes == null && !kIsWeb && _selectedFile!.path != null) {
+        try {
+          final file = File(_selectedFile!.path!);
+          if (await file.exists()) {
+            fileBytes = await file.readAsBytes();
+          }
+        } catch (e) {
+          debugPrint('Error reading selected file bytes: $e');
+        }
+      }
+
       final res = await RestaurantPosService.bulkUploadMenu(
         filename: _selectedFile!.name,
-        bytes: _selectedFile!.bytes,
+        bytes: fileBytes,
         path: kIsWeb ? null : _selectedFile!.path,
         outletId: _targetOutletId,
       );
