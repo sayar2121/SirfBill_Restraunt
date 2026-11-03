@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import '../../services/windows_auto_updater.dart';
 
 class RoleLoginScreen extends StatefulWidget {
   final String roleName;
@@ -25,6 +27,25 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
   bool _obscurePassword = true;
 
   bool _isLoading = false;
+  bool _isCheckingUpdate = false;
+
+  Future<void> _manualCheckUpdate() async {
+    setState(() {
+      _isCheckingUpdate = true;
+    });
+    try {
+      await WindowsAutoUpdater.checkAndShowUpdateIfAvailable(
+        context,
+        showFeedbackWhenLatest: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingUpdate = false;
+        });
+      }
+    }
+  }
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
@@ -212,13 +233,41 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    if (isWeb)
-                      const Text(
-                        'Sirfbill Restaurant • Naiyo24',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      )
-                    else
-                      const SizedBox(width: 60), // Balance the row
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!kIsWeb)
+                          TextButton.icon(
+                            onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
+                            icon: _isCheckingUpdate
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.system_update_alt_rounded, color: Colors.white, size: 16),
+                            label: Text(
+                              _isCheckingUpdate ? 'Checking...' : 'Check Updates',
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                            ),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(alpha: 0.15),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        if (isWeb) ...[
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Sirfbill Restaurant • Naiyo24',
+                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -596,6 +645,36 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
                 ),
               ],
             ),
+            if (!kIsWeb) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
+                  icon: _isCheckingUpdate
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF64748B),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.system_update_alt_rounded,
+                          size: 16,
+                          color: Color(0xFF64748B),
+                        ),
+                  label: Text(
+                    _isCheckingUpdate ? 'Checking for updates...' : 'Check for app updates',
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

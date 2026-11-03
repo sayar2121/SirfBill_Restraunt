@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,26 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _isCheckingUpdate = false;
+
+  Future<void> _manualCheckUpdate() async {
+    setState(() {
+      _isCheckingUpdate = true;
+    });
+    try {
+      await WindowsAutoUpdater.checkAndShowUpdateIfAvailable(
+        context,
+        showFeedbackWhenLatest: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingUpdate = false;
+        });
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -187,7 +208,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Top Bar: Theme toggle
+                        // Top Bar: Update button + Theme toggle
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: isWeb ? 48.0 : 16.0,
@@ -196,6 +217,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
+                              if (!kIsWeb)
+                                TextButton.icon(
+                                  onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
+                                  icon: _isCheckingUpdate
+                                      ? SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.system_update_alt_rounded,
+                                          size: 16,
+                                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                        ),
+                                  label: Text(
+                                    _isCheckingUpdate ? 'Checking...' : 'Check Updates',
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(width: 8),
                               IconButton(
                                 onPressed: () => ref
                                     .read(themeProvider.notifier)

@@ -140,17 +140,51 @@ class WindowsAutoUpdater {
 
   static bool _isDialogShowing = false;
 
-  /// Checks for updates and automatically displays the dialog if an update is found.
-  /// Safe to call multiple times (guards against opening duplicate dialogs).
-  static Future<void> checkAndShowUpdateIfAvailable(BuildContext context) async {
+  /// Checks for updates and displays the dialog.
+  /// If [showFeedbackWhenLatest] is true (e.g. when triggered manually by user click),
+  /// a snackbar or alert will notify the user if their app is already up to date or if check failed.
+  static Future<void> checkAndShowUpdateIfAvailable(
+    BuildContext context, {
+    bool showFeedbackWhenLatest = false,
+  }) async {
     try {
       if (_isDialogShowing) return;
       final updateInfo = await checkForUpdate();
-      if (updateInfo != null && context.mounted && !_isDialogShowing) {
+      if (!context.mounted) return;
+
+      if (updateInfo != null && !_isDialogShowing) {
         await showUpdateDialog(context, updateInfo);
+      } else if (showFeedbackWhenLatest) {
+        final info = await PackageInfo.fromPlatform();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Text('App is up to date (v${info.version})'),
+                ],
+              ),
+              backgroundColor: const Color(0xFF10B981),
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Auto-update check encountered error: $e');
+      if (showFeedbackWhenLatest && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not check for updates: $e'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
