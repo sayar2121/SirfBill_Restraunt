@@ -97,6 +97,24 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
         _isLoading = false;
       });
 
+      // Warm up / precache the first batch of menu images in the background
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        for (final item in items.take(15)) {
+          final url = item.imageUrl ?? PosMenuCard.foodImages[item.name];
+          if (url != null && url.isNotEmpty) {
+            precacheImage(
+              ResizeImage(
+                NetworkImage(url),
+                width: 340,
+                height: 240,
+              ),
+              context,
+            ).catchError((_) {});
+          }
+        }
+      });
+
       // Synchronize active table ID with real table ID from backend
       if (tables.isNotEmpty) {
         final currentTableId = ref.read(restaurantPosProvider).selectedTableId;
