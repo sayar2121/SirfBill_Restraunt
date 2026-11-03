@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../services/restaurant_pos_service.dart';
 import '../../../../services/shop_service.dart';
@@ -209,7 +209,7 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
         savedLocation = await FileSaver.instance.saveFile(
           name: filename,
           bytes: uint8Bytes,
-          ext: ext,
+          fileExtension: ext,
           mimeType: mime,
         );
         saved = true;

@@ -44,7 +44,7 @@ class ExportService {
     return await FileSaver.instance.saveFile(
       name: filename,
       bytes: bytes,
-      ext: ext,
+      fileExtension: ext,
       mimeType: mimeType,
     );
   }
