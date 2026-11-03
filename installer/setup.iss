@@ -1,6 +1,6 @@
 ; Inno Setup Script for Sirfbill Restaurant Windows Application
 #define MyAppName "Sirfbill Restaurant"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Naiyo24"
 #define MyAppURL "https://billbackend.naiyo24.com"
 #define MyAppExeName "Sirfbill_Restaurant.exe"
