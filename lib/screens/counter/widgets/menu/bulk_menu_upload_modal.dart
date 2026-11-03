@@ -111,7 +111,7 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
     sheet.appendRow([
       TextCellValue('Chicken Biryani'),
       TextCellValue('Biryani & Rice'),
-      DoubleCellValue(350.0),
+      const DoubleCellValue(350.0),
       TextCellValue('NON_VEG'),
       TextCellValue('CB'),
       TextCellValue('Aromatic basmati rice cooked with chicken pieces and spices'),
@@ -120,7 +120,7 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
     sheet.appendRow([
       TextCellValue('Paneer Tikka'),
       TextCellValue('Tandoor & Starters'),
-      DoubleCellValue(260.0),
+      const DoubleCellValue(260.0),
       TextCellValue('VEG'),
       TextCellValue('PT'),
       TextCellValue('Grilled cottage cheese marinated in spiced yogurt'),
@@ -129,7 +129,7 @@ class _BulkMenuUploadModalState extends State<BulkMenuUploadModal> {
     sheet.appendRow([
       TextCellValue('Butter Naan'),
       TextCellValue('Breads'),
-      DoubleCellValue(45.0),
+      const DoubleCellValue(45.0),
       TextCellValue('VEG'),
       TextCellValue('BN'),
       TextCellValue('Fresh tandoori bread coated with butter'),
