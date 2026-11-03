@@ -61,11 +61,21 @@ class WindowsAutoUpdater {
 
           final assets = data['assets'] as List? ?? [];
           String downloadUrl = '';
+          // Prefer app-update.zip for smooth in-app delta update via updater.exe, fallback to .exe setup
           for (var asset in assets) {
             final name = (asset['name'] ?? '').toString().toLowerCase();
-            if (name.endsWith('.exe')) {
+            if (name == 'app-update.zip') {
               downloadUrl = asset['browser_download_url'] ?? '';
               break;
+            }
+          }
+          if (downloadUrl.isEmpty) {
+            for (var asset in assets) {
+              final name = (asset['name'] ?? '').toString().toLowerCase();
+              if (name.endsWith('.exe')) {
+                downloadUrl = asset['browser_download_url'] ?? '';
+                break;
+              }
             }
           }
 
