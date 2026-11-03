@@ -49,9 +49,15 @@ jobs:
         run: |
           $tagName = "${{ github.ref_name }}"
           if (-not $tagName -or $tagName -eq "main" -or $tagName -eq "master") {
-            $tagName = "v1.0.0"
+            $pubspec = Get-Content "pubspec.yaml" -Raw
+            if ($pubspec -match "version:\s*([^\+\s]+)") {
+              $tagName = "v" + $matches[1]
+            } else {
+              $tagName = "${{ env.RELEASE_TAG }}"
+            }
           }
           $cleanVersion = $tagName.TrimStart('v')
+          echo "RESOLVED_TAG=$tagName" >> $env:GITHUB_ENV
           flutter build windows --release --build-name=$cleanVersion --build-number=1
 
       - name: Build Standalone Updater (.NET 8)
@@ -79,10 +85,9 @@ jobs:
       - name: Rename & Prepare Artifacts
         shell: pwsh
         run: |
-          # Detect tag or fallback to version in pubspec
-          $tagName = "${{ github.ref_name }}"
-          if (-not $tagName -or $tagName -eq "main" -or $tagName -eq "master") {
-            $tagName = "v1.0.0"
+          $tagName = "$env:RESOLVED_TAG"
+          if (-not $tagName) {
+            $tagName = "${{ env.RELEASE_TAG }}"
           }
           $cleanVersion = $tagName.TrimStart('v')
           echo "RELEASE_TAG=$tagName" >> $env:GITHUB_ENV
