@@ -37,14 +37,8 @@ jobs:
 
       - name: Create .env File
         shell: pwsh
-        env:
-          SECRET_API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
-          if ($env:SECRET_API_BASE_URL) {
-            Set-Content -Path ".env" -Value "API_BASE_URL=$env:SECRET_API_BASE_URL"
-          } else {
-            Set-Content -Path ".env" -Value "API_BASE_URL=http://192.168.0.112:8000"
-          }
+          Set-Content -Path ".env" -Value "API_BASE_URL=http://192.168.0.112:8000"
 
       - name: Build Flutter Windows App (Release)
         shell: pwsh
