@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
 import 'pos_menu_card.dart';
 
-class PosMenuGrid extends StatelessWidget {
+class PosMenuGrid extends StatefulWidget {
   final List<PosMenuItem> items;
   final ValueChanged<PosMenuItem> onAddItem;
 
@@ -13,8 +13,21 @@ class PosMenuGrid extends StatelessWidget {
   });
 
   @override
+  State<PosMenuGrid> createState() => _PosMenuGridState();
+}
+
+class _PosMenuGridState extends State<PosMenuGrid> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return const Center(
         child: Text('No food items found', style: TextStyle(color: Color(0xFF94A3B8))),
       );
@@ -47,22 +60,31 @@ class PosMenuGrid extends StatelessWidget {
           childAspectRatio = 0.88;
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: childAspectRatio,
+        return Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          interactive: true,
+          thickness: 8.0,
+          radius: const Radius.circular(8),
+          child: GridView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            itemCount: widget.items.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: childAspectRatio,
+            ),
+            itemBuilder: (context, index) {
+              final item = widget.items[index];
+              return PosMenuCard(
+                item: item,
+                onAdd: () => widget.onAddItem(item),
+              );
+            },
           ),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return PosMenuCard(
-              item: item,
-              onAdd: () => onAddItem(item),
-            );
-          },
         );
       },
     );

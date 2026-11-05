@@ -7,6 +7,7 @@ import 'widgets/menu/menu_item_manage_tile.dart';
 import 'widgets/menu/add_dish_modal.dart';
 import 'widgets/menu/menu_item_detail_modal.dart';
 import 'widgets/menu/bulk_menu_upload_modal.dart';
+import '../../utils/app_image_cache_manager.dart';
 
 class MenuManagementScreen extends ConsumerWidget {
   const MenuManagementScreen({super.key});
@@ -19,6 +20,19 @@ class MenuManagementScreen extends ConsumerWidget {
     final screenBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
 
     final items = menuState.filteredItems;
+
+    // Precache first visible items in the throttled background queue
+    if (items.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final urls = items
+            .take(20)
+            .map((e) => e.imageUrl?.trim())
+            .whereType<String>()
+            .where((u) => u.isNotEmpty)
+            .toList();
+        AppImageCacheManager.instance.precacheBatch(urls);
+      });
+    }
 
     return Scaffold(
       backgroundColor: screenBg,

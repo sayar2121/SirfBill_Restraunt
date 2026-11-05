@@ -22,6 +22,8 @@ class AppScrollBehavior extends MaterialScrollBehavior {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 250 << 20; // 250 MB
   await dotenv.load(fileName: ".env");
   // Always clear previous session on app launch so closing the app automatically logs out
   await AuthService.logout();

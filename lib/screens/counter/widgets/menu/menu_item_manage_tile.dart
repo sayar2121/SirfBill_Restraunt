@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
+import '../../../../utils/app_image_cache_manager.dart';
 
 class MenuItemManageTile extends StatelessWidget {
   final PosMenuItem item;
@@ -57,31 +58,12 @@ class MenuItemManageTile extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
                   child: (item.imageUrl != null && item.imageUrl!.trim().isNotEmpty)
-                      ? Image.network(
-                          item.imageUrl!.trim(),
+                      ? CachedAppImage(
+                          url: item.imageUrl!.trim(),
                           fit: BoxFit.cover,
                           cacheWidth: 340,
                           cacheHeight: 240,
-                          filterQuality: FilterQuality.low,
-                          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                            if (wasSynchronouslyLoaded || frame != null) {
-                              return child;
-                            }
-                            return Container(
-                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          errorBuilder: (_, __, ___) => _buildFallbackImage(isDark),
+                          errorBuilder: (_, isDark) => _buildFallbackImage(isDark),
                         )
                       : _buildFallbackImage(isDark),
                 ),

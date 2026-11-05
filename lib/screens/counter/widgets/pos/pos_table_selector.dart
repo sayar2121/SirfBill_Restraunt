@@ -34,9 +34,11 @@ class PosTableSelector extends StatelessWidget {
     final effectiveFloor = hasRealFloors
         ? (floorList.contains(selectedFloor) ? selectedFloor : floorList.first)
         : '';
+    final floorTables = tableList.where((t) => t.floor == effectiveFloor).toList();
+    final displayList = floorTables.isNotEmpty ? floorTables : tableList;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -135,159 +137,126 @@ class PosTableSelector extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Table Chips Grid (T1, T2, T3, T4...)
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              final crossAxisCount = width < 300 ? 3 : 4;
-              // Adjusted child aspect ratio to accommodate content height and avoid overflow
-              final childAspectRatio = width < 320 ? 0.95 : (width < 450 ? 0.98 : 1.15);
-              final floorTables = tableList.where((t) => t.floor == effectiveFloor).toList();
-              final displayList = floorTables.isNotEmpty ? floorTables : tableList;
-
-              if (displayList.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.table_restaurant_outlined, size: 18, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 8),
-                        Text(
-                          'No tables set up yet.',
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go('/counter/tables'),
-                          child: const Text('Add in Floor Plan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                        ),
-                      ],
+          // Horizontal Scrollable Table Chips (T1, T2, T3, T4...)
+          SizedBox(
+            height: 72,
+            child: displayList.isEmpty
+                ? Center(
+                    child: Text(
+                      'No tables set up yet.',
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
                     ),
-                  ),
-                );
-              }
+                  )
+                : ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: displayList.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final table = displayList[index];
+                      final isSelected = table.id == selectedTableId;
+                      final isOccupied = table.status == TableStatus.occupied;
 
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: displayList.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: childAspectRatio,
-                ),
-                itemBuilder: (context, index) {
-                  final table = displayList[index];
-                  final isSelected = table.id == selectedTableId;
-                  final isOccupied = table.status == TableStatus.occupied;
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => onSelectTable(table.id),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isOccupied
-                            ? (isSelected
-                                ? const Color(0xFFEF4444)
-                                : (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEF2F2)))
-                            : (isSelected
-                                ? const Color(0xFF10B981)
-                                : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC))),
+                      return InkWell(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isOccupied
-                              ? const Color(0xFFEF4444)
-                              : (isSelected ? const Color(0xFF10B981) : borderColor),
-                          width: isSelected ? 2.5 : 1.2,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)).withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              table.label,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                color: isSelected
-                                    ? Colors.white
-                                    : (isOccupied
-                                        ? const Color(0xFFEF4444)
-                                        : (isDark ? Colors.white : const Color(0xFF0F172A))),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        onTap: () => onSelectTable(table.id),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          width: 88,
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isOccupied
+                                ? (isSelected
+                                    ? const Color(0xFFEF4444)
+                                    : (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEF2F2)))
+                                : (isSelected
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC))),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isOccupied
+                                  ? const Color(0xFFEF4444)
+                                  : (isSelected ? const Color(0xFF10B981) : borderColor),
+                              width: isSelected ? 2.5 : 1.2,
                             ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)).withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                : null,
                           ),
-                          const SizedBox(height: 2),
-                          Flexible(
-                            child: Text(
-                              '${table.capacity} Seater',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? Colors.white.withValues(alpha: 0.9)
-                                    : (isOccupied ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          if (table.occupiedDuration != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                table.occupiedDuration!,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                table.label,
                                 style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.white : const Color(0xFFEF4444),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isOccupied
+                                          ? const Color(0xFFEF4444)
+                                          : (isDark ? Colors.white : const Color(0xFF0F172A))),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            )
-                          else
-                            Text(
-                              isOccupied ? 'Occupied' : 'Empty',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected
-                                    ? Colors.white.withValues(alpha: 0.85)
-                                    : (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${table.capacity} Seater',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white.withValues(alpha: 0.9)
+                                      : (isOccupied ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+                              const SizedBox(height: 2),
+                              if (table.occupiedDuration != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    table.occupiedDuration!,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? Colors.white : const Color(0xFFEF4444),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  isOccupied ? 'Occupied' : 'Empty',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Colors.white.withValues(alpha: 0.85)
+                                        : (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -15,6 +15,7 @@ import '../../services/restaurant_pos_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/shop_settings_service.dart';
 import '../../services/windows_auto_updater.dart';
+import '../../utils/app_image_cache_manager.dart';
 import 'widgets/pos/pos_cart_panel.dart';
 import 'widgets/pos/pos_menu_section.dart';
 import 'widgets/pos/pos_top_bar.dart';
@@ -104,22 +105,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
         _isLoading = false;
       });
 
-      // Warm up / precache the first batch of menu images in the background
+      // Warm up / precache menu images through the throttled AppImageCacheManager
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        for (final item in items.take(15)) {
+        final urls = <String>[];
+        for (final item in items.take(20)) {
           final url = item.imageUrl ?? PosMenuCard.foodImages[item.name];
           if (url != null && url.isNotEmpty) {
-            precacheImage(
-              ResizeImage(
-                NetworkImage(url),
-                width: 340,
-                height: 240,
-              ),
-              context,
-            ).catchError((_) {});
+            urls.add(url);
           }
         }
+        AppImageCacheManager.instance.precacheBatch(urls);
       });
 
       // Synchronize active table ID with real table ID from backend

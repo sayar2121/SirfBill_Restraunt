@@ -3,8 +3,6 @@ import '../notifiers/counter_notifier.dart';
 import '../notifiers/customer_notifier.dart';
 import '../notifiers/inventory_notifier.dart';
 import '../services/inventory_service.dart';
-import '../notifiers/doctor_notifier.dart';
-import '../services/doctor_service.dart';
 import '../notifiers/accounts_notifier.dart';
 import '../notifiers/history_notifier.dart';
 import '../notifiers/settings_notifier.dart';
@@ -52,10 +50,6 @@ final purchaseInventoryProvider =
     AsyncNotifierProvider<PurchaseInventoryNotifier, List<InventoryItem>>(() {
       return PurchaseInventoryNotifier();
     });
-
-final doctorProvider = AsyncNotifierProvider<DoctorNotifier, List<Doctor>>(() {
-  return DoctorNotifier();
-});
 
 final accountsProvider = AsyncNotifierProvider<AccountsNotifier, AccountsState>(
   () {
