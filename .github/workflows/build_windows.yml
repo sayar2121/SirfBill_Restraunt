@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.4
+      RELEASE_TAG: v1.0.5
 
     steps:
       - name: Checkout Code
@@ -92,7 +92,7 @@ jobs:
           $cleanVersion = $tagName.TrimStart('v')
           echo "RELEASE_TAG=$tagName" >> $env:GITHUB_ENV
 
-          # Generate manifest.json
+          # Generate manifest.json with rich release notes
           $manifestContent = @"
           {
             "product_id": "sirfbill-restaurant-windows",
@@ -100,7 +100,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "SirfBill Restaurant Windows Update $tagName",
+            "release_notes": "• [PERFORMANCE] 10-concurrency debounced image loading with RAM & disk cache for menu and POS billing\n• [POS LAYOUT] Fixed top table carousel & customer bar with anchored bottom financial summary\n• [ACCESSIBILITY] Interactive horizontal & vertical scrollbars across menu items, categories, and order cart\n• [OPTIMIZATION] Purged legacy retail/lab files and streamlined codebase",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
