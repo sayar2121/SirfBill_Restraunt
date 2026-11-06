@@ -267,12 +267,45 @@ class CachedAppImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (url.trim().isEmpty) {
+    final trimmedUrl = url.trim();
+    if (trimmedUrl.isEmpty) {
       return errorBuilder?.call(context, isDark) ?? _defaultFallback(isDark);
     }
 
+    // On Flutter Web, use standard Image.network to let the browser handle caching,
+    // rendering, and CORS / canvas rendering natively without manual XHR/http bytes fetch.
+    if (kIsWeb) {
+      return Image.network(
+        trimmedUrl,
+        fit: fit,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) {
+            return child;
+          }
+          return Container(
+            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+            child: Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                ),
+              ),
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return errorBuilder?.call(context, isDark) ?? _defaultFallback(isDark);
+        },
+      );
+    }
+
     final provider = ResizeImage(
-      AppCachedNetworkImageProvider(url.trim()),
+      AppCachedNetworkImageProvider(trimmedUrl),
       width: cacheWidth,
       height: cacheHeight,
     );
