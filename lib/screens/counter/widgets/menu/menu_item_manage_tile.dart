@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
 import '../../../../utils/app_image_cache_manager.dart';
+import '../pos/pos_menu_card.dart';
 
 class MenuItemManageTile extends StatelessWidget {
   final PosMenuItem item;
@@ -57,15 +58,20 @@ class MenuItemManageTile extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  child: (item.imageUrl != null && item.imageUrl!.trim().isNotEmpty)
-                      ? CachedAppImage(
-                          url: item.imageUrl!.trim(),
-                          fit: BoxFit.cover,
-                          cacheWidth: 340,
-                          cacheHeight: 240,
-                          errorBuilder: (_, isDark) => _buildFallbackImage(isDark),
-                        )
-                      : _buildFallbackImage(isDark),
+                  child: () {
+                    final img = (item.imageUrl != null && item.imageUrl!.trim().isNotEmpty)
+                        ? item.imageUrl!.trim()
+                        : PosMenuCard.foodImages[item.name];
+                    return (img != null && img.isNotEmpty)
+                        ? CachedAppImage(
+                            url: img,
+                            fit: BoxFit.cover,
+                            cacheWidth: 340,
+                            cacheHeight: 240,
+                            errorBuilder: (_, isDark) => _buildFallbackImage(isDark),
+                          )
+                        : _buildFallbackImage(isDark);
+                  }(),
                 ),
 
                 // Badge (e.g. Popular, Bestseller - identical to PosMenuCard)

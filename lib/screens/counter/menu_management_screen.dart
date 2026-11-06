@@ -7,6 +7,7 @@ import 'widgets/menu/menu_item_manage_tile.dart';
 import 'widgets/menu/add_dish_modal.dart';
 import 'widgets/menu/menu_item_detail_modal.dart';
 import 'widgets/menu/bulk_menu_upload_modal.dart';
+import 'widgets/pos/pos_menu_card.dart';
 import '../../utils/app_image_cache_manager.dart';
 
 class MenuManagementScreen extends ConsumerWidget {
@@ -24,12 +25,13 @@ class MenuManagementScreen extends ConsumerWidget {
     // Precache first visible items in the throttled background queue
     if (items.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final urls = items
-            .take(20)
-            .map((e) => e.imageUrl?.trim())
-            .whereType<String>()
-            .where((u) => u.isNotEmpty)
-            .toList();
+        final urls = <String>[];
+        for (final item in items.take(20)) {
+          final url = item.imageUrl?.trim() ?? PosMenuCard.foodImages[item.name];
+          if (url != null && url.isNotEmpty) {
+            urls.add(url);
+          }
+        }
         AppImageCacheManager.instance.precacheBatch(urls);
       });
     }
