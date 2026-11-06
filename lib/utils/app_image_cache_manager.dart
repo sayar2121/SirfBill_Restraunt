@@ -127,13 +127,48 @@ class AppImageCacheManager {
     try {
       final uri = Uri.tryParse(url);
       if (uri == null) return null;
-      final response = await http.get(uri).timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-        return response.bodyBytes;
+
+      // 1. First attempt with a quick 4-second timeout
+      try {
+        final response = await http.get(
+          uri,
+          headers: {
+            'User-Agent': 'SirfBillRestaurant/1.0 (https://naiyo24.com; contact@naiyo24.com)',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          },
+        ).timeout(const Duration(seconds: 4));
+
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          return response.bodyBytes;
+        }
+      } catch (_) {
+        // Silently proceed to fallback if primary attempt fails or times out
       }
-    } catch (e) {
-      debugPrint('[AppImageCacheManager] Download error for $url: $e');
-    }
+
+      // 2. If the URL was routed through backend image-proxy and failed/timed out,
+      // fallback directly to the original target URL so images still load even if the proxy hangs
+      if (url.contains('/api/restaurant/menu/image-proxy') && url.contains('url=')) {
+        try {
+          final queryParam = uri.queryParameters['url'];
+          if (queryParam != null && queryParam.isNotEmpty) {
+            final targetUri = Uri.tryParse(queryParam);
+            if (targetUri != null) {
+              final directResp = await http.get(
+                targetUri,
+                headers: {
+                  'User-Agent': 'SirfBillRestaurant/1.0 (https://naiyo24.com; contact@naiyo24.com)',
+                  'Accept': 'image/*,*/*',
+                },
+              ).timeout(const Duration(seconds: 4));
+
+              if (directResp.statusCode == 200 && directResp.bodyBytes.isNotEmpty) {
+                return directResp.bodyBytes;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
     return null;
   }
 

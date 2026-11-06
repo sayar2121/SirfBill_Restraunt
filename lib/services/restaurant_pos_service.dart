@@ -18,9 +18,9 @@ class RestaurantPosService {
         ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
         : ApiConstants.baseUrl;
 
-    // Wikimedia Commons blocks direct browser requests with CORS & requires custom User-Agent.
-    // Route it through our fast backend image proxy.
-    if (str.contains("wikimedia.org")) {
+    // On Web, Wikimedia Commons blocks direct requests due to browser CORS, so route via backend proxy.
+    // On native platforms (Windows desktop, macOS, Android, iOS), direct requests work without CORS limitations.
+    if (kIsWeb && str.contains("wikimedia.org")) {
       return "$base/api/restaurant/menu/image-proxy?url=${Uri.encodeComponent(str)}";
     }
 
