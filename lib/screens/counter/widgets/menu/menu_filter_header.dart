@@ -402,11 +402,11 @@ class _MenuFilterHeaderState extends State<MenuFilterHeader> {
                 Text('Manage Categories', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
-            if (onAddCategory != null)
+            if (widget.onAddCategory != null)
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  onAddCategory!();
+                  widget.onAddCategory!();
                 },
                 icon: const Icon(Icons.add, size: 14),
                 label: const Text('Add New', style: TextStyle(fontSize: 11)),
@@ -449,22 +449,22 @@ class _MenuFilterHeaderState extends State<MenuFilterHeader> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (onEditCategory != null)
+                          if (widget.onEditCategory != null)
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF3B82F6)),
                               tooltip: 'Edit Category',
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                onEditCategory!(cat);
+                                widget.onEditCategory!(cat);
                               },
                             ),
-                          if (onDeleteCategory != null)
+                          if (widget.onDeleteCategory != null)
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
                               tooltip: 'Delete Category',
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                onDeleteCategory!(cat);
+                                widget.onDeleteCategory!(cat);
                               },
                             ),
                         ],
