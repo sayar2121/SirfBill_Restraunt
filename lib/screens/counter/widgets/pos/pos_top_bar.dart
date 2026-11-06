@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,20 @@ class _PosTopBarState extends ConsumerState<PosTopBar> {
   List<Shop> _shops = [];
   String? _currentShopId;
   bool _isAdmin = false;
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String val, WidgetRef ref) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(restaurantPosProvider.notifier).setSearchQuery(val);
+    });
+  }
 
   @override
   void initState() {
@@ -294,7 +309,7 @@ class _PosTopBarState extends ConsumerState<PosTopBar> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
-                          onChanged: posNotifier.setSearchQuery,
+                          onChanged: (val) => _onSearchChanged(val, ref),
                           style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500),
                           decoration: const InputDecoration(
                             isDense: true,

@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
 import '../../../../widgets/common_filter_pills.dart';
 
-class MenuFilterHeader extends StatelessWidget {
+class MenuFilterHeader extends StatefulWidget {
   final int totalCount;
   final int availableCount;
   final int outOfStockCount;
@@ -37,6 +38,26 @@ class MenuFilterHeader extends StatelessWidget {
     this.onDeleteCategory,
     this.onRefresh,
   });
+
+  @override
+  State<MenuFilterHeader> createState() => _MenuFilterHeaderState();
+}
+
+class _MenuFilterHeaderState extends State<MenuFilterHeader> {
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String val) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      widget.onSearch(val);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +99,7 @@ class MenuFilterHeader extends StatelessWidget {
                     width: isCompact ? 130 : 200,
                     height: 36,
                     child: TextField(
-                      onChanged: onSearch,
+                      onChanged: _onSearchChanged,
                       style: const TextStyle(fontSize: 12),
                       decoration: InputDecoration(
                         isDense: true,
@@ -93,9 +114,9 @@ class MenuFilterHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (onRefresh != null) ...[
+                  if (widget.onRefresh != null) ...[
                     IconButton(
-                      onPressed: onRefresh,
+                      onPressed: widget.onRefresh,
                       tooltip: 'Refresh Menu from Backend',
                       icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF10B981)),
                       style: IconButton.styleFrom(
@@ -121,9 +142,9 @@ class MenuFilterHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (onBulkUpload != null) ...[
+                  if (widget.onBulkUpload != null) ...[
                     OutlinedButton.icon(
-                      onPressed: onBulkUpload,
+                      onPressed: widget.onBulkUpload,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF10B981),
                         side: const BorderSide(color: Color(0xFF10B981)),
@@ -139,7 +160,7 @@ class MenuFilterHeader extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   ElevatedButton.icon(
-                    onPressed: onAddDish,
+                    onPressed: widget.onAddDish,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
                       foregroundColor: Colors.white,
@@ -165,8 +186,8 @@ class MenuFilterHeader extends StatelessWidget {
             child: Row(
               children: [
                 // Vertical Category Box Cards (Matches POS Selector Style)
-                ...categories.map((c) {
-                  final isSelected = c.id == selectedCategoryId;
+                ...widget.categories.map((c) {
+                  final isSelected = c.id == widget.selectedCategoryId;
                   final isAll = c.id == 'all';
                   return Padding(
                     padding: const EdgeInsets.only(right: 10.0),
@@ -200,7 +221,7 @@ class MenuFilterHeader extends StatelessWidget {
                             color: Colors.transparent,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(14),
-                              onTap: () => onSelectCategory(c.id),
+                              onTap: () => widget.onSelectCategory(c.id),
                               child: SizedBox.expand(
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -232,19 +253,19 @@ class MenuFilterHeader extends StatelessWidget {
                             ),
                           ),
                           // Edit / Delete action overlay in top corners for custom categories
-                          if (!isAll && (onEditCategory != null || onDeleteCategory != null))
+                          if (!isAll && (widget.onEditCategory != null || widget.onDeleteCategory != null))
                             Positioned(
                               top: 4,
                               right: 4,
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (onEditCategory != null)
+                                  if (widget.onEditCategory != null)
                                     Tooltip(
                                       message: 'Edit Category',
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(4),
-                                        onTap: () => onEditCategory?.call(c),
+                                        onTap: () => widget.onEditCategory?.call(c),
                                         child: Padding(
                                           padding: const EdgeInsets.all(2),
                                           child: Icon(
@@ -257,12 +278,12 @@ class MenuFilterHeader extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                  if (onDeleteCategory != null)
+                                  if (widget.onDeleteCategory != null)
                                     Tooltip(
                                       message: 'Delete Category',
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(4),
-                                        onTap: () => onDeleteCategory?.call(c),
+                                        onTap: () => widget.onDeleteCategory?.call(c),
                                         child: Padding(
                                           padding: const EdgeInsets.all(2),
                                           child: Icon(
@@ -283,7 +304,7 @@ class MenuFilterHeader extends StatelessWidget {
                     ),
                   );
                 }),
-                if (onAddCategory != null) ...[
+                if (widget.onAddCategory != null) ...[
                   Padding(
                     padding: const EdgeInsets.only(right: 6.0),
                     child: Container(
@@ -301,7 +322,7 @@ class MenuFilterHeader extends StatelessWidget {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
-                          onTap: onAddCategory,
+                          onTap: widget.onAddCategory,
                           child: const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -335,26 +356,26 @@ class MenuFilterHeader extends StatelessWidget {
                 // Unified Standard Status Filter Pills (Matching Orders & Tables)
                 CommonStatusFilterPill(
                   label: 'All',
-                  count: totalCount,
-                  isSelected: availabilityFilter == null,
+                  count: widget.totalCount,
+                  isSelected: widget.availabilityFilter == null,
                   color: const Color(0xFF64748B),
-                  onTap: () => onSelectAvailability(null),
+                  onTap: () => widget.onSelectAvailability(null),
                 ),
                 const SizedBox(width: 8),
                 CommonStatusFilterPill(
                   label: 'In Stock',
-                  count: availableCount,
-                  isSelected: availabilityFilter == true,
+                  count: widget.availableCount,
+                  isSelected: widget.availabilityFilter == true,
                   color: const Color(0xFF10B981),
-                  onTap: () => onSelectAvailability(true),
+                  onTap: () => widget.onSelectAvailability(true),
                 ),
                 const SizedBox(width: 8),
                 CommonStatusFilterPill(
                   label: 'Out of Stock',
-                  count: outOfStockCount,
-                  isSelected: availabilityFilter == false,
+                  count: widget.outOfStockCount,
+                  isSelected: widget.availabilityFilter == false,
                   color: const Color(0xFFEF4444),
-                  onTap: () => onSelectAvailability(false),
+                  onTap: () => widget.onSelectAvailability(false),
                 ),
               ],
             ),
@@ -366,7 +387,7 @@ class MenuFilterHeader extends StatelessWidget {
 
 
   void _showManageCategoriesModal(BuildContext context) {
-    final customCats = categories.where((c) => c.id != 'all').toList();
+    final customCats = widget.categories.where((c) => c.id != 'all').toList();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
