@@ -75,26 +75,34 @@ class KitchenTicketCard extends StatelessWidget {
               : (ticket.status == KotStatus.served
                   ? (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))
                   : statusColor.withValues(alpha: 0.6)),
-          width: isUrgent ? 2.2 : 1.3,
+          width: isUrgent ? 2 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
             color: isUrgent
-                ? const Color(0xFFEF4444).withValues(alpha: 0.15)
-                : (isDark ? Colors.black45 : const Color(0xFF0F172A).withValues(alpha: 0.05)),
-            blurRadius: isUrgent ? 14 : 10,
+                ? const Color(0xFFEF4444).withValues(alpha: 0.18)
+                : (isDark
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : const Color(0xFF64748B).withValues(alpha: 0.08)),
+            blurRadius: isUrgent ? 16 : 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 1. Header: KOT Number + Live Elapsed Timer + Print
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: ticket.status == KotStatus.served ? 0.06 : 0.12),
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [statusColor.withValues(alpha: 0.18), statusColor.withValues(alpha: 0.06)]
+                    : [statusColor.withValues(alpha: 0.14), statusColor.withValues(alpha: 0.04)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
               border: Border(bottom: BorderSide(color: statusColor.withValues(alpha: 0.25))),
             ),
@@ -123,14 +131,14 @@ class KitchenTicketCard extends StatelessWidget {
                           KitchenStatusBadge(status: ticket.status, color: statusColor),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           Flexible(
                             child: Text(
                               ticket.orderNumber,
                               style: TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 11,
                                 color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 fontWeight: FontWeight.w700,
                               ),
@@ -149,7 +157,7 @@ class KitchenTicketCard extends StatelessWidget {
                           Text(
                             DateFormat('hh:mm a').format(ticket.createdAt.toLocal()),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 10.5,
                               color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                               fontWeight: FontWeight.w700,
                             ),
@@ -170,13 +178,16 @@ class KitchenTicketCard extends StatelessWidget {
                       statusColor: statusColor,
                     ),
                     const SizedBox(width: 4),
-                    IconButton(
-                      onPressed: onPrintKot,
-                      tooltip: 'Print KOT Slip',
-                      icon: const Icon(Icons.print_rounded, size: 18),
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(),
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    Material(
+                      color: Colors.transparent,
+                      child: IconButton(
+                        onPressed: onPrintKot,
+                        tooltip: 'Print KOT Slip',
+                        icon: const Icon(Icons.print_rounded, size: 18),
+                        padding: const EdgeInsets.all(5),
+                        constraints: const BoxConstraints(),
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
@@ -188,7 +199,7 @@ class KitchenTicketCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+              color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : const Color(0xFFF8FAFC),
               border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
             ),
             child: Row(
@@ -279,7 +290,7 @@ class KitchenTicketCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
-              height: 42,
+              height: 44,
               child: isReadOnly
                   ? Container(
                       decoration: BoxDecoration(
@@ -292,7 +303,7 @@ class KitchenTicketCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(actionIcon, size: 16, color: statusColor),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             ticket.status == KotStatus.newOrder
                                 ? 'New Order • In Queue'
@@ -319,7 +330,8 @@ class KitchenTicketCard extends StatelessWidget {
                                 : statusColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            elevation: 0,
+                            elevation: 2,
+                            shadowColor: statusColor.withValues(alpha: 0.4),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,

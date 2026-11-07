@@ -36,12 +36,17 @@ class KitchenTicketItemRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
               decoration: BoxDecoration(
                 color: item.isPrepared
                     ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
                 borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: item.isPrepared
+                      ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                      : (isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0)),
+                ),
               ),
               child: Text(
                 '${item.quantity}x',
