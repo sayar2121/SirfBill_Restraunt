@@ -47,9 +47,12 @@ final goRouter = GoRouter(
     if (loc == '/splash') {
       if (isLoggedIn) {
         final role = (prefs.getString('user_role') ?? '').trim().toUpperCase();
-        return (role == 'ADMIN' || role == 'OWNER' || role == 'SUPER_ADMIN')
-            ? '/admin'
-            : '/counter/billing';
+        if (role == 'ADMIN' || role == 'OWNER' || role == 'SUPER_ADMIN') {
+          return '/admin';
+        } else if (role == 'KITCHEN' || role == 'CHEF' || role == 'KDS') {
+          return '/kitchen';
+        }
+        return '/counter/billing';
       }
       return '/dashboard';
     }
@@ -65,6 +68,10 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/admin',
       builder: (context, state) => const RestaurantAdminPanelScreen(),
+    ),
+    GoRoute(
+      path: '/kitchen',
+      builder: (context, state) => const KitchenDisplayScreen(isStandalone: true),
     ),
     GoRoute(
       path: '/role_login',

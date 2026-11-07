@@ -23,6 +23,8 @@ class KitchenFilterHeader extends StatefulWidget {
   final VoidCallback onRefresh;
   final bool isSoundEnabled;
   final VoidCallback onToggleSound;
+  final bool isStandalone;
+  final VoidCallback? onExitStandalone;
 
   const KitchenFilterHeader({
     super.key,
@@ -46,6 +48,8 @@ class KitchenFilterHeader extends StatefulWidget {
     required this.onRefresh,
     this.isSoundEnabled = true,
     required this.onToggleSound,
+    this.isStandalone = false,
+    this.onExitStandalone,
   });
 
   @override
@@ -231,6 +235,25 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
                   ),
                 ),
               ),
+              if (widget.isStandalone && widget.onExitStandalone != null) ...[
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: 'Exit Kitchen Mode / Logout',
+                  child: Container(
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                    ),
+                    child: TextButton.icon(
+                      onPressed: widget.onExitStandalone,
+                      icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFEF4444)),
+                      label: const Text('Exit KDS', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 14),

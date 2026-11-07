@@ -97,9 +97,9 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
       _pollingTimer?.cancel();
     });
 
-    // Initial fetch from backend
+    // Initial fetch from backend - default to onlyActive = true so old served orders are hidden by default!
     Future.microtask(() => loadTickets());
-    return const KitchenDisplayState(tickets: [], isLoading: true);
+    return const KitchenDisplayState(tickets: [], isLoading: true, onlyActive: true);
   }
 
   /// Fetch live orders from backend and map them into active KDS tickets

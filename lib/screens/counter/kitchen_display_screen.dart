@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../services/app_session_manager.dart';
 import '../../providers/kitchen_display_provider.dart';
 import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
 import 'widgets/kitchen/kot_receipt_preview_modal.dart';
 
 class KitchenDisplayScreen extends ConsumerStatefulWidget {
-  const KitchenDisplayScreen({super.key});
+  final bool isStandalone;
+  const KitchenDisplayScreen({super.key, this.isStandalone = false});
 
   @override
   ConsumerState<KitchenDisplayScreen> createState() => _KitchenDisplayScreenState();
@@ -40,6 +43,45 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
         duration: const Duration(seconds: 1),
       ),
     );
+  }
+
+  Future<void> _handleExitStandalone() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+            SizedBox(width: 8),
+            Text('Exit Kitchen Display', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text('Are you sure you want to close Kitchen Display mode and return to main screen?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Exit KDS'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await AppSessionManager.resetSession(ref: ref);
+      if (mounted) {
+        context.go('/dashboard');
+      }
+    }
   }
 
   @override
@@ -76,6 +118,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             onSearch: kdsNotifier.setSearchQuery,
             isSoundEnabled: _isSoundEnabled,
             onToggleSound: _toggleSound,
+            isStandalone: widget.isStandalone,
+            onExitStandalone: _handleExitStandalone,
             onRefresh: () async {
               await kdsNotifier.loadTickets();
               if (context.mounted) {

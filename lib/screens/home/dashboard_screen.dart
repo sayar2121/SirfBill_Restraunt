@@ -60,7 +60,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       description: 'Manage KOTs and live kitchen orders.',
       icon: Icons.soup_kitchen_rounded,
       primaryColor: Color(0xFFF97316), // Warm orange
-      nextRoute: '/counter/kitchen',
+      nextRoute: '/kitchen',
       isComingSoon: false,
     ),
     ModuleCardData(
