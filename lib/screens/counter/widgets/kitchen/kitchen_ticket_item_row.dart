@@ -98,3 +98,4 @@ class KitchenTicketItemRow extends StatelessWidget {
     );
   }
 }
+
