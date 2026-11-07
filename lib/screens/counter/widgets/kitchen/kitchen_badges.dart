@@ -48,6 +48,123 @@ class KitchenStatusBadge extends StatelessWidget {
   }
 }
 
+/// Animated live pulsing badge with glowing halo and breathing green dot
+class LivePulseBadge extends StatefulWidget {
+  final String label;
+  final Color color;
+
+  const LivePulseBadge({
+    super.key,
+    this.label = 'LIVE KDS',
+    this.color = const Color(0xFF10B981),
+  });
+
+  @override
+  State<LivePulseBadge> createState() => _LivePulseBadgeState();
+}
+
+class _LivePulseBadgeState extends State<LivePulseBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _opacityAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.25).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _opacityAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: widget.color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: widget.color.withValues(alpha: 0.45),
+          width: 1.1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer glowing pulse ring
+                  Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.color.withValues(
+                          alpha: (1.0 - _opacityAnimation.value) * 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Inner solid pulsing beacon
+                  Opacity(
+                    opacity: _opacityAnimation.value,
+                    child: Container(
+                      width: 6.5,
+                      height: 6.5,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.color,
+                        boxShadow: [
+                          BoxShadow(
+                            color: widget.color.withValues(alpha: 0.8),
+                            blurRadius: 5,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(width: 5),
+          Text(
+            widget.label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.4,
+              color: widget.color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Reusable timer & SLA indicator badge (Elapsed minutes with Warning / Urgent colors)
 class KitchenTimerBadge extends StatelessWidget {
   final DateTime createdAt;

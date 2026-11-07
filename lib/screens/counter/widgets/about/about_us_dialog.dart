@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../services/windows_auto_updater.dart';
+import 'about_us_policies.dart';
+import 'about_widgets.dart';
 
 class AboutUsDialog extends StatelessWidget {
   const AboutUsDialog({super.key});
@@ -111,7 +113,6 @@ class AboutUsDialog extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      // Product Icon Box
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
@@ -217,7 +218,6 @@ class AboutUsDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Organization Section with Official Logo
                     Text(
                       'DEVELOPED & OPERATED BY',
                       style: TextStyle(
@@ -301,10 +301,8 @@ class AboutUsDialog extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 18),
 
-                    // Key Highlights
                     Text(
                       'KEY SYSTEM HIGHLIGHTS',
                       style: TextStyle(
@@ -321,7 +319,7 @@ class AboutUsDialog extends StatelessWidget {
                         if (isCompact) {
                           return Column(
                             children: [
-                              _buildFeatureCard(
+                              AboutFeatureCard(
                                 icon: Icons.cloud_done_rounded,
                                 iconColor: const Color(0xFF0284C7),
                                 title: 'Cloud-Powered',
@@ -332,7 +330,7 @@ class AboutUsDialog extends StatelessWidget {
                                 subtitleColor: subtitleColor,
                               ),
                               const SizedBox(height: 8),
-                              _buildFeatureCard(
+                              AboutFeatureCard(
                                 icon: Icons.print_rounded,
                                 iconColor: const Color(0xFF2563EB),
                                 title: 'Universal Print',
@@ -343,7 +341,7 @@ class AboutUsDialog extends StatelessWidget {
                                 subtitleColor: subtitleColor,
                               ),
                               const SizedBox(height: 8),
-                              _buildFeatureCard(
+                              AboutFeatureCard(
                                 icon: Icons.shield_rounded,
                                 iconColor: const Color(0xFF059669),
                                 title: 'GST Compliant',
@@ -359,7 +357,7 @@ class AboutUsDialog extends StatelessWidget {
                         return Row(
                           children: [
                             Expanded(
-                              child: _buildFeatureCard(
+                              child: AboutFeatureCard(
                                 icon: Icons.cloud_done_rounded,
                                 iconColor: const Color(0xFF0284C7),
                                 title: 'Cloud-Powered',
@@ -372,7 +370,7 @@ class AboutUsDialog extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildFeatureCard(
+                              child: AboutFeatureCard(
                                 icon: Icons.print_rounded,
                                 iconColor: const Color(0xFF2563EB),
                                 title: 'Universal Print',
@@ -385,7 +383,7 @@ class AboutUsDialog extends StatelessWidget {
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildFeatureCard(
+                              child: AboutFeatureCard(
                                 icon: Icons.shield_rounded,
                                 iconColor: const Color(0xFF059669),
                                 title: 'GST Compliant',
@@ -400,10 +398,8 @@ class AboutUsDialog extends StatelessWidget {
                         );
                       },
                     ),
-
                     const SizedBox(height: 18),
 
-                    // Official Contact & Support
                     Text(
                       'OFFICIAL CONTACT & SUPPORT',
                       style: TextStyle(
@@ -423,7 +419,7 @@ class AboutUsDialog extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          _buildContactRow(
+                          AboutContactRow(
                             icon: Icons.business_rounded,
                             label: 'Organization',
                             value: 'NAIYO24 PVT. LTD.',
@@ -431,7 +427,7 @@ class AboutUsDialog extends StatelessWidget {
                             subtitleColor: subtitleColor,
                           ),
                           Divider(height: 16, color: borderColor),
-                          _buildContactRow(
+                          AboutContactRow(
                             icon: Icons.language_rounded,
                             label: 'Website',
                             value: 'www.naiyo24.com',
@@ -441,7 +437,7 @@ class AboutUsDialog extends StatelessWidget {
                             subtitleColor: subtitleColor,
                           ),
                           Divider(height: 16, color: borderColor),
-                          _buildContactRow(
+                          AboutContactRow(
                             icon: Icons.email_rounded,
                             label: 'Support Email',
                             value: 'services.naiyo@gmail.com',
@@ -451,7 +447,7 @@ class AboutUsDialog extends StatelessWidget {
                             subtitleColor: subtitleColor,
                           ),
                           Divider(height: 16, color: borderColor),
-                          _buildContactRow(
+                          AboutContactRow(
                             icon: Icons.headset_mic_rounded,
                             label: 'Customer Support',
                             value: '+91 6289171798',
@@ -463,10 +459,8 @@ class AboutUsDialog extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 18),
 
-                    // Legal / Policies section
                     Text(
                       'LEGAL & COMPLIANCE',
                       style: TextStyle(
@@ -492,25 +486,7 @@ class AboutUsDialog extends StatelessWidget {
                               onTap: () => _showPolicyDialog(
                                 context,
                                 title: 'Privacy Policy',
-                                content: '''
-NAIYO24 PVT. LTD. Privacy Policy
-
-Last Updated: October 2026
-
-1. Data Collection & Processing
-SirfBill processes transaction and inventory data solely for the operation of your business, generating invoices, maintaining customer ledger, and managing inventory stock.
-
-2. Offline & Local Storage
-All your operational data, receipts, and invoices are securely stored in your local device and securely synchronized with authenticated cloud endpoints.
-
-3. Customer Privacy
-Customer phone numbers, addresses, and purchase histories are collected solely for billing and communication at your explicit discretion. We never sell, lease, or share your merchant or customer data with third parties.
-
-4. Security & Encryption
-Communications between SirfBill and server backends are strictly encrypted with TLS/SSL protocols. 
-
-For inquiries regarding data privacy, please contact: services.naiyo@gmail.com.
-''',
+                                content: AboutUsPolicies.privacyPolicy,
                               ),
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -539,24 +515,7 @@ For inquiries regarding data privacy, please contact: services.naiyo@gmail.com.
                               onTap: () => _showPolicyDialog(
                                 context,
                                 title: 'Terms & Conditions',
-                                content: '''
-NAIYO24 PVT. LTD. Terms & Conditions
-
-1. License & Usage
-SirfBill is licensed to your registered enterprise for point-of-sale billing, inventory auditing, customer records, and tax calculations. Unauthorized reverse engineering or redistribution is strictly prohibited.
-
-2. Accuracy of Financial Records
-While SirfBill provides automated GST, discount, and tax calculations, the user/merchant is solely responsible for verifying the regulatory compliance and accuracy of their tax filings and invoices.
-
-3. Software Updates & Maintenance
-NAIYO24 PVT. LTD. regularly issues software updates for performance, security, and feature improvements. Users are encouraged to maintain the latest version for optimum stability.
-
-4. Support & Service
-Customer assistance is provided through official support channels:
-- Email: services.naiyo@gmail.com
-- Hotline: +91 6289171798
-- Website: www.naiyo24.com
-''',
+                                content: AboutUsPolicies.termsAndConditions,
                               ),
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -585,7 +544,7 @@ Customer assistance is provided through official support channels:
               ),
             ),
 
-            // Footer / Actions
+            // Footer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -648,96 +607,6 @@ Customer assistance is provided through official support channels:
                     ],
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String desc,
-    required Color cardBg,
-    required Color borderColor,
-    required Color textColor,
-    Color? subtitleColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            desc,
-            style: TextStyle(
-              fontSize: 10,
-              color: subtitleColor,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    bool isLink = false,
-    VoidCallback? onTap,
-    required Color textColor,
-    Color? subtitleColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: const Color(0xFF166534)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 12, color: subtitleColor),
-              ),
-            ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isLink ? const Color(0xFF2563EB) : textColor,
               ),
             ),
           ],

@@ -169,6 +169,7 @@ enum OrderStatus {
   completed,
   cancelled,
   hold,
+  served,
 }
 
 enum PaymentStatus {

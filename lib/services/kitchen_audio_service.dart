@@ -11,9 +11,17 @@ class KitchenAudioService {
   static Future<void> playNewOrderAlert({bool loop = false}) async {
     try {
       await _player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
-      // Stop previous playback if any, then play freshly
+      await _player.setVolume(1.0);
       await _player.stop();
-      await _player.play(AssetSource('audio/order_ring.mp3'));
+
+      // On Flutter Web, audioplayers looks up assets from the web server root.
+      // Trying AssetSource followed by UrlSource fallback guarantees web audio plays properly.
+      try {
+        await _player.play(AssetSource('audio/order_ring.mp3'));
+      } catch (assetErr) {
+        debugPrint('[KitchenAudioService] AssetSource fallback to assets/audio/order_ring.mp3: $assetErr');
+        await _player.play(UrlSource('assets/assets/audio/order_ring.mp3'));
+      }
       debugPrint('[KitchenAudioService] Successfully played order_ring.mp3 (loop=$loop)');
     } catch (e) {
       debugPrint('[KitchenAudioService] Error playing kitchen alert: $e');
@@ -27,4 +35,5 @@ class KitchenAudioService {
     } catch (_) {}
   }
 }
+
 

@@ -111,7 +111,7 @@ class KitchenTicketCard extends StatelessWidget {
                             child: Text(
                               ticket.kotNumber,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w900,
                                 color: statusColor,
                                 letterSpacing: 0.2,
@@ -126,17 +126,20 @@ class KitchenTicketCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Text(
-                            ticket.orderNumber,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              fontWeight: FontWeight.w700,
+                          Flexible(
+                            child: Text(
+                              ticket.orderNumber,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 5),
+                          const SizedBox(width: 4),
                           Text('•', style: TextStyle(fontSize: 10, color: borderColor)),
-                          const SizedBox(width: 5),
+                          const SizedBox(width: 4),
                           Icon(
                             Icons.schedule_rounded,
                             size: 11,
@@ -156,6 +159,7 @@ class KitchenTicketCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -165,12 +169,12 @@ class KitchenTicketCard extends StatelessWidget {
                       status: ticket.status,
                       statusColor: statusColor,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     IconButton(
                       onPressed: onPrintKot,
                       tooltip: 'Print KOT Slip',
                       icon: const Icon(Icons.print_rounded, size: 18),
-                      padding: const EdgeInsets.all(5),
+                      padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(),
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
@@ -189,25 +193,38 @@ class KitchenTicketCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                KitchenOrderTypeBadge(
-                  orderType: ticket.orderType,
-                  tableLabel: ticket.tableLabel,
-                ),
-                if (ticket.floor != null && ticket.floor!.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    '• ${ticket.floor}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                      fontWeight: FontWeight.w600,
-                    ),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: KitchenOrderTypeBadge(
+                          orderType: ticket.orderType,
+                          tableLabel: ticket.tableLabel,
+                        ),
+                      ),
+                      if (ticket.floor != null && ticket.floor!.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '• ${ticket.floor}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-                const Spacer(),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   ticket.serverName ?? 'Staff',
                   style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

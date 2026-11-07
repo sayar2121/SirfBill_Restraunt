@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../router/app_router.dart' as import_router;
 import '../../themes/app_colors.dart';
 import '../../services/windows_auto_updater.dart';
 
@@ -21,23 +20,25 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // Show splash animation for at least 1.5 seconds
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // 1. On Windows desktop, check for updates first before navigating
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        final updateInfo = await WindowsAutoUpdater.checkForUpdate();
+        if (updateInfo != null && mounted) {
+          // Show the update popup immediately on top of the splash screen
+          await WindowsAutoUpdater.showUpdateDialog(context, updateInfo);
+        }
+      } catch (e) {
+        debugPrint('[SplashScreen] Auto update check failed: $e');
+      }
+    }
+
+    // 2. Minimum splash delay for smooth branding experience
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
-    if (mounted) {
-      context.go('/dashboard');
-    }
-
-    // Check for updates automatically right after dashboard mounts ONLY on Windows desktop
-    if (!kIsWeb && Platform.isWindows) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        final currentContext = import_router.goRouter.routerDelegate.navigatorKey.currentContext;
-        if (currentContext != null && currentContext.mounted) {
-          WindowsAutoUpdater.checkAndShowUpdateIfAvailable(currentContext);
-        }
-      });
-    }
+    // 3. Navigate to Dashboard once up to date
+    context.go('/dashboard');
   }
 
   @override

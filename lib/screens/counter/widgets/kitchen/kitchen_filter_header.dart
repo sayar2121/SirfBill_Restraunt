@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
+import 'kitchen_badges.dart';
 
 class KitchenFilterHeader extends StatefulWidget {
   final int totalCount;
@@ -79,7 +80,7 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: cardBg,
         border: Border(bottom: BorderSide(color: borderColor, width: 1.2)),
@@ -94,171 +95,188 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: Brand title, Status Indicator, Search & Controls
-          Row(
-            children: [
-              // Icon Badge with live pulse
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF97316), Color(0xFFEA580C)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFEA580C).withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.soup_kitchen_rounded, color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // Row 1: Brand title on left, Search & Action buttons on right (Responsive Wrap/Layout)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 950;
+              final brandWidget = Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Kitchen Display System',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.2,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF97316), Color(0xFFEA580C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
-                            SizedBox(width: 4),
-                            Text(
-                              'LIVE KDS',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF10B981)),
+                      ],
+                    ),
+                    child: const Icon(Icons.soup_kitchen_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Kitchen Display System',
+                            style: TextStyle(
+                              fontSize: isNarrow ? 15 : 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.2,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 8),
+                          const LivePulseBadge(label: 'LIVE KDS'),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Real-time order prep queue • Auto-synced with POS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Real-time order prep queue • Auto-synced with POS',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                    ),
-                  ),
                 ],
-              ),
-              const Spacer(),
+              );
 
-              // Search Bar with 300ms debounce
-              SizedBox(
-                width: 240,
-                height: 42,
-                child: TextField(
-                  onChanged: _onSearchChanged,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    prefixIcon: const Icon(Icons.search_rounded, size: 19, color: Color(0xFF94A3B8)),
-                    hintText: 'Search KOT / table / dish...',
-                    hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFF97316), width: 1.5),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              // Audio Alert Toggle (only shown when sound toggle is provided)
-              if (widget.onToggleSound != null) ...[
-                Tooltip(
-                  message: widget.isSoundEnabled ? 'Sound Alerts: ON' : 'Sound Alerts: OFF',
-                  child: Container(
-                    height: 42,
-                    width: 42,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: IconButton(
-                      onPressed: widget.onToggleSound,
-                      icon: Icon(
-                        widget.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                        size: 20,
-                        color: widget.isSoundEnabled ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+              final actionsWidget = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: isNarrow ? 160 : 240, minWidth: 100),
+                    child: SizedBox(
+                      height: 36,
+                      child: TextField(
+                        onChanged: _onSearchChanged,
+                        style: const TextStyle(fontSize: 12),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.search_rounded, size: 16, color: Color(0xFF94A3B8)),
+                          hintText: 'Search KOT / table...',
+                          hintStyle: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFFF97316), width: 1.5),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-              ],
+                  const SizedBox(width: 6),
+                  if (widget.onToggleSound != null) ...[
+                    Tooltip(
+                      message: widget.isSoundEnabled ? 'Sound Alerts: ON' : 'Sound Alerts: OFF',
+                      child: Container(
+                        height: 36,
+                        width: 36,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: widget.onToggleSound,
+                          icon: Icon(
+                            widget.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                            size: 17,
+                            color: widget.isSoundEnabled ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Tooltip(
+                    message: 'Sync latest tickets now',
+                    child: Container(
+                      height: 36,
+                      width: 36,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: widget.onRefresh,
+                        icon: const Icon(Icons.refresh_rounded, size: 17, color: Color(0xFFF97316)),
+                      ),
+                    ),
+                  ),
+                  if (widget.isStandalone && widget.onExitStandalone != null) ...[
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: 'Exit Kitchen Mode / Logout',
+                      child: Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                        ),
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: widget.onExitStandalone,
+                          icon: const Icon(Icons.logout_rounded, size: 15, color: Color(0xFFEF4444)),
+                          label: const Text('Exit', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
 
-              // Manual Sync / Refresh Button
-              Tooltip(
-                message: 'Sync latest tickets now',
-                child: Container(
-                  height: 42,
-                  width: 42,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: IconButton(
-                    onPressed: widget.onRefresh,
-                    icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFFF97316)),
-                  ),
-                ),
-              ),
-              if (widget.isStandalone && widget.onExitStandalone != null) ...[
-                const SizedBox(width: 10),
-                Tooltip(
-                  message: 'Exit Kitchen Mode / Logout',
-                  child: Container(
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    brandWidget,
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: actionsWidget,
                     ),
-                    child: TextButton.icon(
-                      onPressed: widget.onExitStandalone,
-                      icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFEF4444)),
-                      label: const Text('Exit KDS', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFFEF4444))),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: brandWidget),
+                  const SizedBox(width: 12),
+                  actionsWidget,
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Row 2: Status Cards Carousel (Matches POS Category Selector: 72px Height)
           SingleChildScrollView(

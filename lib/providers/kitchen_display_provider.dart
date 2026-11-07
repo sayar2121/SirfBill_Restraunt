@@ -150,19 +150,32 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         if (_ticketStatusMap.containsKey(order.id)) {
           kotStatus = _ticketStatusMap[order.id]!;
         } else {
+          final ageHours = DateTime.now().difference(order.createdAt).inHours;
+          final isRecentOrder = ageHours < 12;
+
           switch (order.status) {
             case OrderStatus.active:
               kotStatus = KotStatus.newOrder;
               break;
             case OrderStatus.hold:
-              // Orders that are paid and settled/delivered are already served
-              if (order.paymentStatus == PaymentStatus.paid && order.orderType != OrderType.dineIn) {
-                kotStatus = KotStatus.served;
+              // For Dine-in / held unpaid orders, keep them active in kitchen until served
+              if (isRecentOrder) {
+                kotStatus = KotStatus.newOrder;
               } else {
-                kotStatus = KotStatus.preparing;
+                kotStatus = KotStatus.served;
               }
               break;
             case OrderStatus.completed:
+              // When POS confirms payment/settlement on Takeaway or Dine-In, kitchen still needs to PREPARE and SERVE it!
+              // Only when kitchen staff marks it Served (or order is older than today), is it moved to served.
+              if (isRecentOrder) {
+                kotStatus = KotStatus.newOrder;
+              } else {
+                kotStatus = KotStatus.served;
+              }
+              break;
+            case OrderStatus.served:
+              // Explicitly served by kitchen staff!
               kotStatus = KotStatus.served;
               break;
             case OrderStatus.cancelled:
@@ -347,10 +360,8 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           backendStatus = 'HOLD';
           break;
         case KotStatus.served:
-          // In food service lifecycle, "Served" means food is on the table, NOT settled/paid!
-          // We keep the backend order status as 'HOLD' or 'OPEN' (so the table remains occupied and
-          // bill payment remains available in POS).
-          backendStatus = 'HOLD';
+          // In food service lifecycle, when kitchen marks "Served", transition backend status to SERVED
+          backendStatus = 'SERVED';
           break;
       }
       await RestaurantPosService.transitionOrderStatus(

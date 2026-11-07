@@ -183,34 +183,37 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                   )
                 : tickets.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: (isDark ? const Color(0xFF1E293B) : Colors.white),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.05),
-                                    blurRadius: 16,
-                                  ),
-                                ],
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: (isDark ? const Color(0xFF1E293B) : Colors.white),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 16,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.soup_kitchen_outlined, size: 54, color: Color(0xFF94A3B8)),
                               ),
-                              child: const Icon(Icons.soup_kitchen_outlined, size: 54, color: Color(0xFF94A3B8)),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No KOT tickets for current filter',
-                              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Kitchen is all caught up! New POS orders will appear automatically.',
-                              style: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No KOT tickets for current filter',
+                                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Kitchen is all caught up! New POS orders will appear automatically.',
+                                style: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : LayoutBuilder(
