@@ -56,11 +56,25 @@ namespace SirfBill.Updater
 
             string backupDir = Path.Combine(Path.GetTempPath(), "SirfBill_Backup_" + DateTime.Now.Ticks);
             string stagingDir = Path.Combine(Path.GetTempPath(), "SirfBill_Staging_" + DateTime.Now.Ticks);
+            string logPath = Path.Combine(installDir, "updater.log");
+
+            void Log(string message)
+            {
+                try
+                {
+                    string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n";
+                    File.AppendAllText(logPath, entry);
+                    Console.WriteLine(message);
+                }
+                catch { }
+            }
 
             try
             {
+                Log($"Updater started for PID={waitPid}, installDir='{installDir}', restartExe='{restartExe}'");
+
                 // Step 2: Extract update package to staging
-                Console.WriteLine("Extracting update files...");
+                Log("Extracting update files...");
                 Directory.CreateDirectory(stagingDir);
                 ZipFile.ExtractToDirectory(packagePath, stagingDir);
 
@@ -73,15 +87,15 @@ namespace SirfBill.Updater
                 }
 
                 // Step 3: Backup current install directory
-                Console.WriteLine("Backing up current version...");
+                Log("Backing up current version...");
                 Directory.CreateDirectory(backupDir);
                 CopyDirectory(installDir, backupDir, excludeUpdater: true);
 
                 // Step 4: Replace app files (preserving local configs/database)
-                Console.WriteLine("Applying update files...");
+                Log("Applying update files...");
                 CopyDirectory(sourceDir, installDir, excludeUpdater: true);
 
-                Console.WriteLine("Update applied successfully!");
+                Log("Update applied successfully!");
 
                 // Step 5: Clean up package
                 try { File.Delete(packagePath); } catch { }
@@ -90,10 +104,11 @@ namespace SirfBill.Updater
                 // Step 6: Launch new version
                 if (!string.IsNullOrEmpty(restartExe) && File.Exists(restartExe))
                 {
-                    Console.WriteLine("Restarting SirfBill...");
+                    Log("Restarting SirfBill...");
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = restartExe,
+                        WorkingDirectory = installDir,
                         UseShellExecute = true
                     });
                 }
@@ -102,8 +117,9 @@ namespace SirfBill.Updater
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during update: {ex.Message}");
-                Console.WriteLine("Rolling back previous version...");
+                Log($"Error during update: {ex.Message}");
+                Log($"Stack trace: {ex.StackTrace}");
+                Log("Rolling back previous version...");
 
                 // Rollback from backup
                 try
@@ -111,12 +127,27 @@ namespace SirfBill.Updater
                     if (Directory.Exists(backupDir))
                     {
                         CopyDirectory(backupDir, installDir, excludeUpdater: true);
-                        Console.WriteLine("Rollback completed.");
+                        Log("Rollback completed.");
                     }
                 }
                 catch (Exception rollbackEx)
                 {
-                    Console.WriteLine($"Rollback error: {rollbackEx.Message}");
+                    Log($"Rollback error: {rollbackEx.Message}");
+                }
+
+                // If update failed and rolled back, still restart the original app so user isn't stranded
+                if (!string.IsNullOrEmpty(restartExe) && File.Exists(restartExe))
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = restartExe,
+                            WorkingDirectory = installDir,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch { }
                 }
 
                 return 1;
