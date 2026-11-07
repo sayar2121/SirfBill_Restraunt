@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.8
+      RELEASE_TAG: v1.0.9
 
     steps:
       - name: Checkout Code
@@ -101,7 +101,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [KDS POS VIEW] POS billing Kitchen tab is now an informative read-only overview (no action buttons, no audio alerts)\n• [KDS SOUND] Custom order_ring.mp3 audio alert plays exclusively in Dedicated Kitchen Display mode\n• [IMAGE LOADING] 99% bandwidth reduction on Wikimedia images with width=400 thumbnail resolution & 10s timeout\n• [KDS FILTERS] Takeaway/Delivery settled orders auto-marked served & hidden from Active Queue",
+            "release_notes": "• [KDS ALERT MODAL] Prominent interactive dialog pops up on new incoming orders with looping ring audio\n• [KDS PREP TIMER] Preparation timer starts from 00:00 only when kitchen staff taps 'Accept & Start Prep'\n• [KDS POLLING] Ultra-fast 4s sync interval for near real-time order arrival on KDS\n• [KDS ROLES] POS billing Kitchen tab is read-only and muted, while Dedicated KDS has full interactive prep controls",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

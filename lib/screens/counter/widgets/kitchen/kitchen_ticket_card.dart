@@ -34,7 +34,7 @@ class KitchenTicketCard extends StatelessWidget {
     switch (ticket.status) {
       case KotStatus.newOrder:
         statusColor = const Color(0xFFEF4444);
-        nextActionLabel = 'Start Prep';
+        nextActionLabel = 'Accept & Prep';
         nextStatus = KotStatus.preparing;
         actionIcon = Icons.soup_kitchen_rounded;
         break;
@@ -161,6 +161,7 @@ class KitchenTicketCard extends StatelessWidget {
                   children: [
                     KitchenTimerBadge(
                       createdAt: ticket.createdAt,
+                      prepStartedAt: ticket.prepStartedAt,
                       status: ticket.status,
                       statusColor: statusColor,
                     ),

@@ -310,6 +310,7 @@ class KitchenTicket {
   final String? serverName; // Waiter / Cashier
   final KotStatus status;
   final DateTime createdAt;
+  final DateTime? prepStartedAt; // Time when order was accepted/prep started
   final List<KotItem> items;
   final String? specialInstruction;
 
@@ -323,6 +324,7 @@ class KitchenTicket {
     this.serverName = 'Staff',
     required this.status,
     required this.createdAt,
+    this.prepStartedAt,
     required this.items,
     this.specialInstruction,
   });
@@ -337,6 +339,7 @@ class KitchenTicket {
     String? serverName,
     KotStatus? status,
     DateTime? createdAt,
+    DateTime? prepStartedAt,
     List<KotItem>? items,
     String? specialInstruction,
   }) {
@@ -350,6 +353,7 @@ class KitchenTicket {
       serverName: serverName ?? this.serverName,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      prepStartedAt: prepStartedAt ?? this.prepStartedAt,
       items: items ?? this.items,
       specialInstruction: specialInstruction ?? this.specialInstruction,
     );

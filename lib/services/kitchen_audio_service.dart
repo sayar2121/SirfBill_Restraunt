@@ -6,19 +6,15 @@ class KitchenAudioService {
   KitchenAudioService._();
 
   static final AudioPlayer _player = AudioPlayer();
-  static bool _isInitialized = false;
 
-  /// Play the order ring alert sound from assets/audio/order_ring.mp3
-  static Future<void> playNewOrderAlert() async {
+  /// Play the order ring alert sound from assets/audio/order_ring.mp3 (looping until stopped)
+  static Future<void> playNewOrderAlert({bool loop = false}) async {
     try {
-      if (!_isInitialized) {
-        await _player.setReleaseMode(ReleaseMode.stop);
-        _isInitialized = true;
-      }
+      await _player.setReleaseMode(loop ? ReleaseMode.loop : ReleaseMode.stop);
       // Stop previous playback if any, then play freshly
       await _player.stop();
       await _player.play(AssetSource('audio/order_ring.mp3'));
-      debugPrint('[KitchenAudioService] Successfully played order_ring.mp3');
+      debugPrint('[KitchenAudioService] Successfully played order_ring.mp3 (loop=$loop)');
     } catch (e) {
       debugPrint('[KitchenAudioService] Error playing kitchen alert: $e');
     }

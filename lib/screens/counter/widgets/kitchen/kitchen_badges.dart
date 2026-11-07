@@ -51,12 +51,14 @@ class KitchenStatusBadge extends StatelessWidget {
 /// Reusable timer & SLA indicator badge (Elapsed minutes with Warning / Urgent colors)
 class KitchenTimerBadge extends StatelessWidget {
   final DateTime createdAt;
+  final DateTime? prepStartedAt;
   final KotStatus status;
   final Color statusColor;
 
   const KitchenTimerBadge({
     super.key,
     required this.createdAt,
+    this.prepStartedAt,
     required this.status,
     required this.statusColor,
   });
@@ -66,7 +68,11 @@ class KitchenTimerBadge extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
 
-    final elapsedMins = DateTime.now().difference(createdAt).inMinutes;
+    // If order is still 'newOrder' (not accepted yet), show queued time or 'Waiting'
+    final isQueued = status == KotStatus.newOrder;
+    final timerBase = (prepStartedAt != null) ? prepStartedAt! : createdAt;
+    final elapsedMins = DateTime.now().difference(timerBase).inMinutes;
+
     final isUrgent = elapsedMins >= 15 && status != KotStatus.served;
     final isWarning = elapsedMins >= 10 && elapsedMins < 15 && status != KotStatus.served;
 
@@ -94,15 +100,17 @@ class KitchenTimerBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isUrgent ? Icons.warning_rounded : Icons.timer_outlined,
+            isUrgent ? Icons.warning_rounded : (isQueued ? Icons.schedule_rounded : Icons.timer_outlined),
             size: 12,
             color: textColor,
           ),
           const SizedBox(width: 4),
           Text(
-            elapsedMins < 60
-                ? '${elapsedMins}m'
-                : '${elapsedMins ~/ 60}h ${elapsedMins % 60}m',
+            isQueued
+                ? 'Queue: ${elapsedMins}m'
+                : (elapsedMins < 60
+                    ? '${elapsedMins}m'
+                    : '${elapsedMins ~/ 60}h ${elapsedMins % 60}m'),
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w900,

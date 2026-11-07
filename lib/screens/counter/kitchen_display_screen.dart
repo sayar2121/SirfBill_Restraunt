@@ -7,6 +7,8 @@ import '../../providers/kitchen_display_provider.dart';
 import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
 import 'widgets/kitchen/kot_receipt_preview_modal.dart';
+import 'widgets/kitchen/new_order_alert_modal.dart';
+import '../../models/restaurant_pos_models.dart';
 
 class KitchenDisplayScreen extends ConsumerStatefulWidget {
   final bool isStandalone;
@@ -18,6 +20,7 @@ class KitchenDisplayScreen extends ConsumerStatefulWidget {
 
 class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   Timer? _liveClockTimer;
+  String? _shownAlertTicketId;
 
   @override
   void initState() {
@@ -92,6 +95,34 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     final screenBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
 
     final tickets = kdsState.filteredTickets;
+
+    // Show popup modal when a new order arrives in dedicated KDS mode
+    if (widget.isStandalone && kdsState.pendingAlertTicket != null) {
+      final alertTicket = kdsState.pendingAlertTicket!;
+      if (_shownAlertTicketId != alertTicket.id) {
+        _shownAlertTicketId = alertTicket.id;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => NewOrderAlertModal(
+              ticket: alertTicket,
+              onAccept: () {
+                Navigator.of(ctx).pop();
+                kdsNotifier.updateTicketStatus(alertTicket.id, KotStatus.preparing);
+              },
+              onDismiss: () {
+                Navigator.of(ctx).pop();
+                kdsNotifier.clearPendingAlert();
+              },
+            ),
+          ).then((_) {
+            _shownAlertTicketId = null;
+          });
+        });
+      }
+    }
 
     return Scaffold(
       backgroundColor: screenBg,

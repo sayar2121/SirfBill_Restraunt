@@ -17,6 +17,7 @@ class KitchenDisplayState {
   final bool onlyActive;
   final bool onlyDelayed;
   final bool isSoundEnabled;
+  final KitchenTicket? pendingAlertTicket;
 
   const KitchenDisplayState({
     required this.tickets,
@@ -27,6 +28,7 @@ class KitchenDisplayState {
     this.onlyActive = false,
     this.onlyDelayed = false,
     this.isSoundEnabled = true,
+    this.pendingAlertTicket,
   }) : _isLoading = isLoading;
 
   List<KitchenTicket> get filteredTickets {
@@ -70,6 +72,7 @@ class KitchenDisplayState {
     bool? onlyActive,
     bool? onlyDelayed,
     bool? isSoundEnabled,
+    KitchenTicket? Function()? pendingAlertTicket,
   }) {
     return KitchenDisplayState(
       tickets: tickets ?? this.tickets,
@@ -80,6 +83,7 @@ class KitchenDisplayState {
       onlyActive: onlyActive ?? this.onlyActive,
       onlyDelayed: onlyDelayed ?? this.onlyDelayed,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
+      pendingAlertTicket: pendingAlertTicket != null ? pendingAlertTicket() : this.pendingAlertTicket,
     );
   }
 }
@@ -89,6 +93,8 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   final Map<String, bool> _preparedItemMap = {};
   // Store client-side kitchen ticket status override keyed by "orderId"
   final Map<String, KotStatus> _ticketStatusMap = {};
+  // Store time when preparation was started / order accepted
+  final Map<String, DateTime> _prepStartTimeMap = {};
   // Track known ticket IDs to detect new incoming tickets and ring alert
   final Set<String> _knownTicketIds = {};
   bool _hasInitialLoaded = false;
@@ -97,7 +103,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   @override
   KitchenDisplayState build() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       loadTickets(silent: true);
     });
 
@@ -202,6 +208,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
             serverName: serverName,
             status: kotStatus,
             createdAt: order.createdAt,
+            prepStartedAt: _prepStartTimeMap[order.id],
             items: kotItems,
             specialInstruction: order.notes,
           ),
@@ -218,13 +225,17 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         return b.createdAt.compareTo(a.createdAt); // Newest first
       });
 
-      // Detect newly arrived tickets to play audio ring alert
+      // Detect newly arrived tickets to trigger popup alert and loop audio
+      KitchenTicket? firstNewTicket;
       if (_hasInitialLoaded) {
-        final hasNewIncoming = mappedTickets.any(
+        final newlyArrived = mappedTickets.where(
           (t) => !_knownTicketIds.contains(t.id) && t.status != KotStatus.served,
-        );
-        if (hasNewIncoming && state.isSoundEnabled) {
-          KitchenAudioService.playNewOrderAlert();
+        ).toList();
+        if (newlyArrived.isNotEmpty) {
+          firstNewTicket = newlyArrived.first;
+          if (state.isSoundEnabled) {
+            KitchenAudioService.playNewOrderAlert(loop: true);
+          }
         }
       }
 
@@ -235,7 +246,11 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
       _hasInitialLoaded = true;
 
       debugPrint('[KDS] Successfully mapped ${mappedTickets.length} real orders into KDS tickets');
-      state = state.copyWith(tickets: mappedTickets, isLoading: false);
+      state = state.copyWith(
+        tickets: mappedTickets,
+        isLoading: false,
+        pendingAlertTicket: firstNewTicket != null ? () => firstNewTicket : null,
+      );
     } catch (e) {
       debugPrint('Error loading KDS tickets from backend: $e');
       state = state.copyWith(isLoading: false);
@@ -246,11 +261,19 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   void addTicket(KitchenTicket ticket) {
     _knownTicketIds.add(ticket.id);
     final existing = state.tickets.where((t) => t.id != ticket.id).toList();
-    state = state.copyWith(tickets: [ticket, ...existing]);
+    state = state.copyWith(
+      tickets: [ticket, ...existing],
+      pendingAlertTicket: () => ticket,
+    );
 
     if (state.isSoundEnabled && ticket.status != KotStatus.served) {
-      KitchenAudioService.playNewOrderAlert();
+      KitchenAudioService.playNewOrderAlert(loop: true);
     }
+  }
+
+  void clearPendingAlert() {
+    KitchenAudioService.stop();
+    state = state.copyWith(pendingAlertTicket: () => null);
   }
 
   void toggleSound() {
@@ -285,14 +308,30 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   Future<void> updateTicketStatus(String ticketId, KotStatus nextStatus) async {
     _ticketStatusMap[ticketId] = nextStatus;
 
+    // When advancing to 'preparing', record the acceptance timestamp so prep timer starts from 00:00!
+    if (nextStatus == KotStatus.preparing && !_prepStartTimeMap.containsKey(ticketId)) {
+      _prepStartTimeMap[ticketId] = DateTime.now();
+    }
+
+    // Stop audio alert if this ticket was the pending alert
+    if (state.pendingAlertTicket?.id == ticketId) {
+      KitchenAudioService.stop();
+    }
+
     // 1. Optimistic UI update
     final updated = state.tickets.map((t) {
       if (t.id == ticketId) {
-        return t.copyWith(status: nextStatus);
+        return t.copyWith(
+          status: nextStatus,
+          prepStartedAt: _prepStartTimeMap[ticketId] ?? t.prepStartedAt,
+        );
       }
       return t;
     }).toList();
-    state = state.copyWith(tickets: updated);
+    state = state.copyWith(
+      tickets: updated,
+      pendingAlertTicket: state.pendingAlertTicket?.id == ticketId ? () => null : null,
+    );
 
     // 2. Synchronize transition with backend API
     try {
