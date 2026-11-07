@@ -29,6 +29,9 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Dynamically refresh baseUrl in case user configured server IP
+          options.baseUrl = ApiConstants.baseUrl;
+
           // Only attach backend JWT Authorization token to backend requests, never to external URLs like GitHub
           final baseUri = Uri.tryParse(ApiConstants.baseUrl);
           final reqHost = options.uri.host;

@@ -6,6 +6,7 @@ import 'providers/theme_provider.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/auth_service.dart';
+import 'config/api_constants.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
@@ -24,7 +25,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   PaintingBinding.instance.imageCache.maximumSize = 1000;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 250 << 20; // 250 MB
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (_) {}
+  await ApiConstants.init();
   // Always clear previous session on app launch so closing the app automatically logs out
   await AuthService.logout();
   runApp(const ProviderScope(child: SirfBillApp()));

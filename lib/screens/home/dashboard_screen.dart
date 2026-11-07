@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/windows_auto_updater.dart';
 import '../../widgets/restaurant_module_card.dart';
+import '../../config/api_constants.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -16,6 +17,74 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isCheckingUpdate = false;
+
+  Future<void> _showServerConfigDialog() async {
+    final controller = TextEditingController(text: ApiConstants.baseUrl);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.dns_rounded, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text('Server IP & URL Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the local backend IP address or server URL running your restaurant database (e.g. http://192.168.0.31:8000 or http://127.0.0.1:8000):',
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'http://192.168.0.31:8000',
+                prefixIcon: const Icon(Icons.link_rounded, size: 18),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              await ApiConstants.setCustomBaseUrl(controller.text);
+              if (ctx.mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Server URL updated to ${ApiConstants.baseUrl}'),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save & Connect'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _manualCheckUpdate() async {
     setState(() {
@@ -250,6 +319,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   ),
                                 ),
                               const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: 'Server Connection Settings',
+                                onPressed: _showServerConfigDialog,
+                                icon: Icon(
+                                  Icons.dns_rounded,
+                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
                               IconButton(
                                 onPressed: () => ref
                                     .read(themeProvider.notifier)
