@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../utils/responsive.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_session_manager.dart';
 import '../../services/shop_settings_service.dart';
 import '../../services/windows_auto_updater.dart';
-import '../../providers/counter_providers.dart';
 import '../../providers/theme_provider.dart';
 
 import 'widgets/dashboard/counter_dashboard_header.dart';
@@ -128,13 +128,9 @@ class _CounterDashboardState extends ConsumerState<CounterDashboard> {
   }
 
   Future<void> _handleLogout() async {
-    await AuthService.logout();
+    await AppSessionManager.resetSession(ref: ref);
     if (mounted) {
       context.go('/dashboard');
-      ref.invalidate(categoryProvider);
-      ref.invalidate(rackProvider);
-      ref.invalidate(inventoryProvider);
-      ref.invalidate(billingInventoryProvider);
     }
   }
 

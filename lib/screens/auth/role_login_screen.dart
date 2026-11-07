@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_session_manager.dart';
 import '../../services/windows_auto_updater.dart';
 
-class RoleLoginScreen extends StatefulWidget {
+class RoleLoginScreen extends ConsumerStatefulWidget {
   final String roleName;
   final Color themeColor;
   final String nextRoute;
@@ -17,10 +19,10 @@ class RoleLoginScreen extends StatefulWidget {
   });
 
   @override
-  State<RoleLoginScreen> createState() => _RoleLoginScreenState();
+  ConsumerState<RoleLoginScreen> createState() => _RoleLoginScreenState();
 }
 
-class _RoleLoginScreenState extends State<RoleLoginScreen> {
+class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
   final _userIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -66,6 +68,8 @@ class _RoleLoginScreenState extends State<RoleLoginScreen> {
         );
 
         if (success && mounted) {
+          // Immediately invalidate all old cached Riverpod state so the new account fetches fresh data
+          AppSessionManager.invalidateProviders(ref: ref);
           context.go(widget.nextRoute);
         }
       } catch (e) {

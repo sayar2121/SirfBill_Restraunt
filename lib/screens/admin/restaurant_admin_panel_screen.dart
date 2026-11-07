@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_session_manager.dart';
 import '../../services/shop_service.dart';
 import '../../services/inventory_service.dart';
 import '../../services/admin_staff_service.dart';
@@ -11,14 +13,14 @@ import 'widgets/admin_outlets_tab.dart';
 import 'widgets/admin_users_tab.dart';
 import 'widgets/admin_dialogs.dart';
 
-class RestaurantAdminPanelScreen extends StatefulWidget {
+class RestaurantAdminPanelScreen extends ConsumerStatefulWidget {
   const RestaurantAdminPanelScreen({super.key});
 
   @override
-  State<RestaurantAdminPanelScreen> createState() => _RestaurantAdminPanelScreenState();
+  ConsumerState<RestaurantAdminPanelScreen> createState() => _RestaurantAdminPanelScreenState();
 }
 
-class _RestaurantAdminPanelScreenState extends State<RestaurantAdminPanelScreen> {
+class _RestaurantAdminPanelScreenState extends ConsumerState<RestaurantAdminPanelScreen> {
   int _selectedIndex = 0;
   bool _isSidebarCollapsed = false;
 
@@ -92,7 +94,7 @@ class _RestaurantAdminPanelScreenState extends State<RestaurantAdminPanelScreen>
     );
 
     if (confirm == true && mounted) {
-      await AuthService.logout();
+      await AppSessionManager.resetSession(ref: ref);
       if (mounted) {
         context.go('/dashboard');
       }

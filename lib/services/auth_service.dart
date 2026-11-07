@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_client.dart';
 import 'inventory_service.dart';
+import '../utils/app_image_cache_manager.dart';
 
 class AuthService {
   static const String _tokenKey = 'access_token';
@@ -11,6 +12,9 @@ class AuthService {
 
   /// Admin login using email and password
   static Future<bool> adminLogin(String email, String password) async {
+    // 1. Immediately wipe any lingering session or shop cache before logging in
+    await logout();
+
     try {
       final response = await ApiClient().dio.post(
         '/api/auth/admin-login',
@@ -34,7 +38,7 @@ class AuthService {
               data['outlet_id']?.toString();
 
           if (assignedId != null && assignedId.isNotEmpty) {
-            await prefs.setString('selected_shop_id', assignedId);
+            await InventoryService.setShopId(assignedId);
             await prefs.setString('assigned_outlet_id', assignedId);
             if (data['outlet'] != null && data['outlet']['name'] != null) {
               await prefs.setString('assigned_outlet_name', data['outlet']['name'].toString());
@@ -46,7 +50,8 @@ class AuthService {
             if (shopsResp.statusCode == 200 && shopsResp.data != null) {
               final List<dynamic> shops = shopsResp.data;
               if (shops.isNotEmpty) {
-                await prefs.setString('selected_shop_id', shops.first['id'].toString());
+                final firstShopId = shops.first['id'].toString();
+                await InventoryService.setShopId(firstShopId);
               }
             }
           }
@@ -76,9 +81,11 @@ class AuthService {
     await prefs.remove(_userIdKey);
     await prefs.remove(_roleKey);
     await prefs.remove(_userNameKey);
+    await prefs.remove('role_login_name');
     await prefs.remove('assigned_outlet_id');
     await prefs.remove('assigned_outlet_name');
     await InventoryService.clearShopId();
+    AppImageCacheManager.instance.clearMemoryCache();
   }
 
   static Future<String?> getToken() async {
