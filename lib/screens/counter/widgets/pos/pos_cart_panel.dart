@@ -141,6 +141,16 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
               liveTables: widget.liveTables,
               onReloadMenu: widget.onReloadMenu,
             ),
+            onPrintBill: () => PosOrderActionController.handlePrintCustomerBill(
+              context: context,
+              ref: ref,
+              posState: posState,
+              liveTables: widget.liveTables,
+              shopSettings: widget.shopSettings,
+              activeOutlet: widget.activeOutlet,
+              onReloadMenu: widget.onReloadMenu,
+              onSelectTable: widget.onSelectTable,
+            ),
             onProceedToPayment: () => PosBillingDialogs.showPaymentDialog(
               context: context,
               ref: ref,

@@ -165,6 +165,16 @@ class PosSettlementService {
     ref.read(restaurantReportProvider.notifier).loadReportData();
     onReloadMenu();
 
+    // ── Step 3b: If Dine-In table order was settled and paid, free the table to Available/Vacant ─
+    if (state.orderType == OrderType.dineIn && state.selectedTableId != null) {
+      try {
+        await RestaurantPosService.updateTableStatus(state.selectedTableId!, TableStatus.available);
+        ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
+      } catch (e) {
+        debugPrint('Warning: Freeing table status failed: $e');
+      }
+    }
+
     debugPrint('[Settlement] Step 4 — calling clearCart(clearCustomer: true)');
     // ── Step 4: Clear cart and customer IMMEDIATELY after order is confirmed ─
     // This MUST happen before any async PDF/print work so the cart and customer

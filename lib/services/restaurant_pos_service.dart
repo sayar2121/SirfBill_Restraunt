@@ -407,6 +407,8 @@ class RestaurantPosService {
             status = TableStatus.occupied;
           } else if (rawStatus == 'reserved') {
             status = TableStatus.reserved;
+          } else if (rawStatus == 'vacant' || rawStatus == 'available') {
+            status = TableStatus.available;
           }
 
           final rawBill = json['active_order_grand_total'] ?? json['current_bill_amount'] ?? 0.0;
@@ -518,7 +520,7 @@ class RestaurantPosService {
   static Future<bool> updateTableStatus(String tableId, TableStatus status) async {
     try {
       final statusStr = status == TableStatus.available
-          ? 'AVAILABLE'
+          ? 'VACANT'
           : (status == TableStatus.occupied ? 'OCCUPIED' : 'RESERVED');
       final res = await _dio.patch(
         '/api/restaurant/tables/$tableId/status',

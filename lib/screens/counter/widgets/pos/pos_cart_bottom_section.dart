@@ -11,6 +11,7 @@ class PosCartBottomSection extends StatelessWidget {
   final VoidCallback onAddDiscount;
   final VoidCallback onSaveHold;
   final VoidCallback onPrintKot;
+  final VoidCallback? onPrintBill;
   final VoidCallback onProceedToPayment;
 
   const PosCartBottomSection({
@@ -20,6 +21,7 @@ class PosCartBottomSection extends StatelessWidget {
     required this.onAddDiscount,
     required this.onSaveHold,
     required this.onPrintKot,
+    this.onPrintBill,
     required this.onProceedToPayment,
   });
 
@@ -73,11 +75,12 @@ class PosCartBottomSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Action Bar (Save/Hold, Print KOT, Payment)
+          // Action Bar (Save/Hold, Print KOT, Print Bill, Payment)
           PosBottomActionBar(
             activeOrderLabel: posState.activeOrderNumber,
             onSaveHold: onSaveHold,
             onPrintKot: onPrintKot,
+            onPrintBill: onPrintBill,
             onProceedToPayment: onProceedToPayment,
           ),
         ],
