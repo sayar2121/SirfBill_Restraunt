@@ -26,63 +26,77 @@ class KitchenTicketCard extends StatelessWidget {
     Color statusColor;
     String nextActionLabel;
     KotStatus? nextStatus;
+    IconData actionIcon;
 
     switch (ticket.status) {
       case KotStatus.newOrder:
         statusColor = const Color(0xFFEF4444);
         nextActionLabel = 'Start Prep';
         nextStatus = KotStatus.preparing;
+        actionIcon = Icons.soup_kitchen_rounded;
         break;
       case KotStatus.preparing:
         statusColor = const Color(0xFFF59E0B);
         nextActionLabel = 'Mark Ready';
         nextStatus = KotStatus.ready;
+        actionIcon = Icons.done_all_rounded;
         break;
       case KotStatus.ready:
         statusColor = const Color(0xFF10B981);
         nextActionLabel = 'Mark Served';
         nextStatus = KotStatus.served;
+        actionIcon = Icons.check_circle_outline_rounded;
         break;
       case KotStatus.served:
         statusColor = const Color(0xFF6366F1);
         nextActionLabel = 'Order Served';
         nextStatus = null;
+        actionIcon = Icons.check_circle_rounded;
         break;
     }
 
+    // Elapsed SLA Calculation
     final elapsedMins = DateTime.now().difference(ticket.createdAt).inMinutes;
     final isUrgent = elapsedMins >= 15 && ticket.status != KotStatus.served;
+    final isWarning = elapsedMins >= 10 && elapsedMins < 15 && ticket.status != KotStatus.served;
+
+    // Check preparation progress of individual items
+    final totalItemsCount = ticket.items.length;
+    final preparedItemsCount = ticket.items.where((i) => i.isPrepared).length;
+    final allItemsPrepared = totalItemsCount > 0 && preparedItemsCount == totalItemsCount;
 
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUrgent
               ? const Color(0xFFEF4444)
               : (ticket.status == KotStatus.served
                   ? (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))
                   : statusColor.withValues(alpha: 0.6)),
-          width: isUrgent ? 2.0 : 1.2,
+          width: isUrgent ? 2.2 : 1.3,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black38 : const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: isUrgent
+                ? const Color(0xFFEF4444).withValues(alpha: 0.15)
+                : (isDark ? Colors.black45 : const Color(0xFF0F172A).withValues(alpha: 0.05)),
+            blurRadius: isUrgent ? 14 : 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: KOT # + Timer + Print
+          // 1. Header: KOT Number + Live Elapsed SLA Badge + Print Action
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: ticket.status == KotStatus.served ? 0.06 : 0.12),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
-              border: Border(bottom: BorderSide(color: statusColor.withValues(alpha: 0.2), width: 1)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              border: Border(bottom: BorderSide(color: statusColor.withValues(alpha: 0.25))),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -97,7 +111,7 @@ class KitchenTicketCard extends StatelessWidget {
                             child: Text(
                               ticket.kotNumber,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 color: statusColor,
                                 letterSpacing: 0.2,
@@ -107,10 +121,10 @@ class KitchenTicketCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
+                              color: statusColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               ticket.status == KotStatus.newOrder
@@ -119,7 +133,7 @@ class KitchenTicketCard extends StatelessWidget {
                                       ? 'IN PREP'
                                       : (ticket.status == KotStatus.ready ? 'READY' : 'SERVED')),
                               style: TextStyle(
-                                fontSize: 9,
+                                fontSize: 9.5,
                                 fontWeight: FontWeight.w900,
                                 color: statusColor,
                               ),
@@ -127,90 +141,94 @@ class KitchenTicketCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 1),
+                      const SizedBox(height: 2),
                       Row(
                         children: [
                           Text(
                             ticket.orderNumber,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 10.5,
                               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            '•',
-                            style: TextStyle(fontSize: 10, color: borderColor),
-                          ),
+                          Text('•', style: TextStyle(fontSize: 10, color: borderColor)),
                           const SizedBox(width: 5),
                           Icon(
                             Icons.schedule_rounded,
-                            size: 10,
+                            size: 11,
                             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 3),
                           Text(
                             DateFormat('hh:mm a').format(ticket.createdAt.toLocal()),
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 10,
                               color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        DateFormat('dd MMM yyyy').format(ticket.createdAt.toLocal()),
-                        style: TextStyle(
-                          fontSize: 8.5,
-                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
                     ],
                   ),
                 ),
+
+                // SLA Timer & Print Icon
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isUrgent ? const Color(0xFFEF4444) : (isDark ? const Color(0xFF0F172A) : Colors.white),
-                        borderRadius: BorderRadius.circular(6),
+                        color: isUrgent
+                            ? const Color(0xFFEF4444)
+                            : (isWarning
+                                ? const Color(0xFFF59E0B)
+                                : (isDark ? const Color(0xFF0F172A) : Colors.white)),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isUrgent ? Colors.transparent : borderColor,
-                          width: 0.8,
+                          color: (isUrgent || isWarning) ? Colors.transparent : borderColor,
+                          width: 1,
                         ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.access_time_rounded, size: 11, color: isUrgent ? Colors.white : (ticket.status == KotStatus.served ? const Color(0xFF64748B) : statusColor)),
+                          Icon(
+                            isUrgent ? Icons.warning_rounded : Icons.timer_outlined,
+                            size: 12,
+                            color: (isUrgent || isWarning)
+                                ? Colors.white
+                                : (ticket.status == KotStatus.served
+                                    ? const Color(0xFF64748B)
+                                    : statusColor),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             elapsedMins < 60
                                 ? '${elapsedMins}m'
-                                : (elapsedMins < 1440
-                                    ? '${elapsedMins ~/ 60}h ${elapsedMins % 60}m'
-                                    : '${elapsedMins ~/ 1440}d ago'),
+                                : '${elapsedMins ~/ 60}h ${elapsedMins % 60}m',
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: isUrgent ? Colors.white : (ticket.status == KotStatus.served ? const Color(0xFF64748B) : statusColor),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: (isUrgent || isWarning)
+                                  ? Colors.white
+                                  : (ticket.status == KotStatus.served
+                                      ? const Color(0xFF64748B)
+                                      : statusColor),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     IconButton(
                       onPressed: onPrintKot,
                       tooltip: 'Print KOT Slip',
-                      icon: const Icon(Icons.print_rounded, size: 16),
-                      padding: const EdgeInsets.all(4),
+                      icon: const Icon(Icons.print_rounded, size: 18),
+                      padding: const EdgeInsets.all(5),
                       constraints: const BoxConstraints(),
                       color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
@@ -220,58 +238,93 @@ class KitchenTicketCard extends StatelessWidget {
             ),
           ),
 
-          // Meta Info: Table & Server / Source
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          // 2. Metadata Bar: Table Tag / Order Type / Server
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.5) : const Color(0xFFF8FAFC),
+              border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
+            ),
             child: Row(
               children: [
+                // Order Type Pill (Dine-in / Takeaway / Delivery)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: (ticket.orderType == OrderType.dineIn
                             ? const Color(0xFF10B981)
-                            : (ticket.orderType == OrderType.takeaway ? const Color(0xFFF97316) : const Color(0xFF8B5CF6)))
-                        .withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Text(
-                    ticket.tableLabel != null && ticket.tableLabel!.isNotEmpty
-                        ? 'Table ${ticket.tableLabel}'
-                        : ticket.orderType.name.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: ticket.orderType == OrderType.dineIn
-                          ? const Color(0xFF10B981)
-                          : (ticket.orderType == OrderType.takeaway ? const Color(0xFFF97316) : const Color(0xFF8B5CF6)),
+                            : (ticket.orderType == OrderType.takeaway
+                                ? const Color(0xFFF97316)
+                                : const Color(0xFF8B5CF6)))
+                        .withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: (ticket.orderType == OrderType.dineIn
+                              ? const Color(0xFF10B981)
+                              : (ticket.orderType == OrderType.takeaway
+                                  ? const Color(0xFFF97316)
+                                  : const Color(0xFF8B5CF6)))
+                          .withValues(alpha: 0.35),
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        ticket.orderType == OrderType.dineIn
+                            ? Icons.table_restaurant_rounded
+                            : (ticket.orderType == OrderType.takeaway
+                                ? Icons.shopping_bag_rounded
+                                : Icons.delivery_dining_rounded),
+                        size: 12,
+                        color: ticket.orderType == OrderType.dineIn
+                            ? const Color(0xFF10B981)
+                            : (ticket.orderType == OrderType.takeaway
+                                ? const Color(0xFFF97316)
+                                : const Color(0xFF8B5CF6)),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        ticket.tableLabel != null && ticket.tableLabel!.isNotEmpty
+                            ? 'Table ${ticket.tableLabel}'
+                            : ticket.orderType.name.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: ticket.orderType == OrderType.dineIn
+                              ? const Color(0xFF10B981)
+                              : (ticket.orderType == OrderType.takeaway
+                                  ? const Color(0xFFF97316)
+                                  : const Color(0xFF8B5CF6)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 if (ticket.floor != null && ticket.floor!.isNotEmpty) ...[
                   const SizedBox(width: 6),
-                  Text('• ${ticket.floor}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                  Text('• ${ticket.floor}', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : const Color(0xFF64748B), fontWeight: FontWeight.w600)),
                 ],
                 const Spacer(),
                 Text(
                   ticket.serverName ?? 'Staff',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
-          Divider(height: 1, color: borderColor),
 
-          // Items List with interactive Strike-through Checkbox
+          // 3. Line Items with Touch Strike-through & Progress Indicator
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               itemCount: ticket.items.length,
               separatorBuilder: (_, __) => Divider(height: 8, color: borderColor.withValues(alpha: 0.5)),
               itemBuilder: (context, idx) {
                 final it = ticket.items[idx];
                 return InkWell(
                   onTap: () => onToggleItem(it.id),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -279,8 +332,10 @@ class KitchenTicketCard extends StatelessWidget {
                       children: [
                         Icon(
                           it.isPrepared ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                          size: 19,
-                          color: it.isPrepared ? const Color(0xFF10B981) : (isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
+                          size: 20,
+                          color: it.isPrepared
+                              ? const Color(0xFF10B981)
+                              : (isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -294,9 +349,11 @@ class KitchenTicketCard extends StatelessWidget {
                           child: Text(
                             '${it.quantity}x',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.5,
                               fontWeight: FontWeight.w900,
-                              color: it.isPrepared ? const Color(0xFF10B981) : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                              color: it.isPrepared
+                                  ? const Color(0xFF10B981)
+                                  : (isDark ? Colors.white : const Color(0xFF0F172A)),
                             ),
                           ),
                         ),
@@ -321,12 +378,19 @@ class KitchenTicketCard extends StatelessWidget {
                               if (it.notes != null && it.notes!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 2),
-                                  child: Text(
-                                    '👉 ${it.notes!}',
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: Color(0xFFEF4444),
-                                      fontWeight: FontWeight.w700,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '👉 ${it.notes!}',
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        color: Color(0xFFEF4444),
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -342,23 +406,24 @@ class KitchenTicketCard extends StatelessWidget {
           ),
 
           // Special Instruction notice if present
-          if (ticket.specialInstruction != null) ...[
+          if (ticket.specialInstruction != null && ticket.specialInstruction!.isNotEmpty) ...[
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              padding: const EdgeInsets.all(6),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 13, color: Color(0xFFD97706)),
-                  const SizedBox(width: 4),
+                  const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFD97706)),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       ticket.specialInstruction!,
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
-                      maxLines: 1,
+                      style: const TextStyle(fontSize: 10.5, color: Color(0xFF92400E), fontWeight: FontWeight.w700),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -367,17 +432,19 @@ class KitchenTicketCard extends StatelessWidget {
             ),
           ],
 
-          // Bottom Action Button: Next Progression Status (or Completed Indicator for Served)
+          // 4. Action Progression Button: Start Prep / Mark Ready / Mark Served
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
-              height: 38,
+              height: 42,
               child: nextStatus != null
                   ? ElevatedButton(
                       onPressed: () => onUpdateStatus(nextStatus!),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: statusColor,
+                        backgroundColor: (nextStatus == KotStatus.ready && !allItemsPrepared)
+                            ? statusColor.withValues(alpha: 0.85)
+                            : statusColor,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
@@ -385,9 +452,13 @@ class KitchenTicketCard extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(actionIcon, size: 16),
+                          const SizedBox(width: 6),
                           Text(
-                            nextActionLabel,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            nextStatus == KotStatus.ready && allItemsPrepared
+                                ? 'All Prepared • Ready'
+                                : nextActionLabel,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(width: 6),
                           const Icon(Icons.arrow_forward_rounded, size: 14),
@@ -404,13 +475,13 @@ class KitchenTicketCard extends StatelessWidget {
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF6366F1)),
+                          Icon(Icons.check_circle_rounded, size: 17, color: Color(0xFF6366F1)),
                           SizedBox(width: 6),
                           Text(
-                            'Order Served',
+                            'Order Fully Served',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
                               color: Color(0xFF6366F1),
                             ),
                           ),

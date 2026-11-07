@@ -14,6 +14,7 @@ class KitchenDisplayState {
   bool get isLoading => _isLoading ?? false;
 
   final bool onlyActive;
+  final bool onlyDelayed;
 
   const KitchenDisplayState({
     required this.tickets,
@@ -22,12 +23,19 @@ class KitchenDisplayState {
     this.searchQuery = '',
     bool isLoading = false,
     this.onlyActive = false,
+    this.onlyDelayed = false,
   }) : _isLoading = isLoading;
 
   List<KitchenTicket> get filteredTickets {
     return tickets.where((t) {
       if (onlyActive && t.status == KotStatus.served) {
         return false;
+      }
+      if (onlyDelayed) {
+        final elapsedMins = DateTime.now().difference(t.createdAt).inMinutes;
+        if (elapsedMins < 15 || t.status == KotStatus.served) {
+          return false;
+        }
       }
       final matchesStatus = statusFilter == null || t.status == statusFilter;
       final matchesType = typeFilter == null || t.orderType == typeFilter;
@@ -45,6 +53,10 @@ class KitchenDisplayState {
   int get preparingCount => tickets.where((t) => t.status == KotStatus.preparing).length;
   int get readyCount => tickets.where((t) => t.status == KotStatus.ready).length;
   int get servedCount => tickets.where((t) => t.status == KotStatus.served).length;
+  int get delayedCount => tickets.where((t) {
+        final mins = DateTime.now().difference(t.createdAt).inMinutes;
+        return mins >= 15 && t.status != KotStatus.served;
+      }).length;
 
   KitchenDisplayState copyWith({
     List<KitchenTicket>? tickets,
@@ -53,6 +65,7 @@ class KitchenDisplayState {
     String? searchQuery,
     bool? isLoading,
     bool? onlyActive,
+    bool? onlyDelayed,
   }) {
     return KitchenDisplayState(
       tickets: tickets ?? this.tickets,
@@ -61,6 +74,7 @@ class KitchenDisplayState {
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       onlyActive: onlyActive ?? this.onlyActive,
+      onlyDelayed: onlyDelayed ?? this.onlyDelayed,
     );
   }
 }
@@ -212,15 +226,19 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   }
 
   void setStatusFilter(KotStatus? status) {
-    state = state.copyWith(statusFilter: () => status, onlyActive: false);
+    state = state.copyWith(statusFilter: () => status, onlyActive: false, onlyDelayed: false);
   }
 
   void filterActiveOnly() {
-    state = state.copyWith(statusFilter: () => null, onlyActive: true);
+    state = state.copyWith(statusFilter: () => null, onlyActive: true, onlyDelayed: false);
+  }
+
+  void filterDelayedOnly() {
+    state = state.copyWith(statusFilter: () => null, onlyActive: false, onlyDelayed: true);
   }
 
   void showAll() {
-    state = state.copyWith(statusFilter: () => null, onlyActive: false);
+    state = state.copyWith(statusFilter: () => null, onlyActive: false, onlyDelayed: false);
   }
 
   void setTypeFilter(OrderType? type) {

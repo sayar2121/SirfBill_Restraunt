@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/kitchen_display_provider.dart';
@@ -5,11 +6,44 @@ import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
 import 'widgets/kitchen/kot_receipt_preview_modal.dart';
 
-class KitchenDisplayScreen extends ConsumerWidget {
+class KitchenDisplayScreen extends ConsumerStatefulWidget {
   const KitchenDisplayScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<KitchenDisplayScreen> createState() => _KitchenDisplayScreenState();
+}
+
+class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
+  bool _isSoundEnabled = true;
+  Timer? _liveClockTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Live clock timer for re-evaluating SLA elapsed minutes every 30 seconds
+    _liveClockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _liveClockTimer?.cancel();
+    super.dispose();
+  }
+
+  void _toggleSound() {
+    setState(() => _isSoundEnabled = !_isSoundEnabled);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isSoundEnabled ? 'KDS Sound alerts enabled' : 'KDS Sound alerts muted'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final kdsState = ref.watch(kitchenDisplayProvider);
     final kdsNotifier = ref.read(kitchenDisplayProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -21,28 +55,33 @@ class KitchenDisplayScreen extends ConsumerWidget {
       backgroundColor: screenBg,
       body: Column(
         children: [
-          // 1. Kitchen Filter Header (Status, Type, Search, Refresh)
+          // 1. Kitchen Filter Header (Matches POS Billing Control Style)
           KitchenFilterHeader(
             totalCount: kdsState.totalCount,
             activeCount: kdsState.activeCount,
             newCount: kdsState.newCount,
             preparingCount: kdsState.preparingCount,
             readyCount: kdsState.readyCount,
+            delayedCount: kdsState.delayedCount,
             servedCount: kdsState.servedCount,
             statusFilter: kdsState.statusFilter,
             typeFilter: kdsState.typeFilter,
             onlyActive: kdsState.onlyActive,
+            onlyDelayed: kdsState.onlyDelayed,
             onSelectStatus: kdsNotifier.setStatusFilter,
             onSelectActive: kdsNotifier.filterActiveOnly,
+            onSelectDelayed: kdsNotifier.filterDelayedOnly,
             onSelectAll: kdsNotifier.showAll,
             onSelectType: kdsNotifier.setTypeFilter,
             onSearch: kdsNotifier.setSearchQuery,
+            isSoundEnabled: _isSoundEnabled,
+            onToggleSound: _toggleSound,
             onRefresh: () async {
               await kdsNotifier.loadTickets();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('KDS refreshed with latest kitchen orders!'),
+                    content: Text('KDS refreshed with live kitchen orders!'),
                     duration: Duration(seconds: 1),
                     backgroundColor: Color(0xFF10B981),
                   ),
@@ -51,90 +90,103 @@ class KitchenDisplayScreen extends ConsumerWidget {
             },
           ),
 
-          // 2. Responsive KDS Ticket Matrix
+          // 2. High-Contrast Kitchen Ticket Matrix (Touchscreen & Desktop Optimized)
           Expanded(
             child: (kdsState.isLoading == true && tickets.isEmpty)
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(strokeWidth: 3, color: Color(0xFFF97316)),
+                        CircularProgressIndicator(strokeWidth: 3.5, color: Color(0xFFF97316)),
                         SizedBox(height: 16),
                         Text(
                           'Loading live kitchen tickets...',
-                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 14, color: Color(0xFF64748B), fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
                   )
                 : tickets.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.soup_kitchen_outlined, size: 48, color: Color(0xFF94A3B8)),
-                            SizedBox(height: 12),
-                            Text(
-                              'No active KOT tickets for this filter',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF64748B)),
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: (isDark ? const Color(0xFF1E293B) : Colors.white),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 16,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(Icons.soup_kitchen_outlined, size: 54, color: Color(0xFF94A3B8)),
                             ),
-                            SizedBox(height: 6),
-                            Text(
-                              'Kitchen is all caught up!',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'No KOT tickets for current filter',
+                              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF64748B)),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Kitchen is all caught up! New POS orders will appear automatically.',
+                              style: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
                             ),
                           ],
                         ),
                       )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth;
-                      int crossAxisCount;
-                      double childAspectRatio;
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final width = constraints.maxWidth;
+                          int crossAxisCount;
+                          double childAspectRatio;
 
-                      if (width < 500) {
-                        crossAxisCount = 1;
-                        childAspectRatio = 1.05;
-                      } else if (width < 800) {
-                        crossAxisCount = 2;
-                        childAspectRatio = 0.95;
-                      } else if (width < 1200) {
-                        crossAxisCount = 3;
-                        childAspectRatio = 0.92;
-                      } else if (width < 1600) {
-                        crossAxisCount = 4;
-                        childAspectRatio = 0.96;
-                      } else {
-                        crossAxisCount = 5;
-                        childAspectRatio = 1.0;
-                      }
+                          if (width < 600) {
+                            crossAxisCount = 1;
+                            childAspectRatio = 1.05;
+                          } else if (width < 960) {
+                            crossAxisCount = 2;
+                            childAspectRatio = 0.88;
+                          } else if (width < 1400) {
+                            crossAxisCount = 3;
+                            childAspectRatio = 0.82;
+                          } else if (width < 1850) {
+                            crossAxisCount = 4;
+                            childAspectRatio = 0.84;
+                          } else {
+                            crossAxisCount = 5;
+                            childAspectRatio = 0.88;
+                          }
 
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: tickets.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: childAspectRatio,
-                        ),
-                        itemBuilder: (context, index) {
-                          final ticket = tickets[index];
-                          return KitchenTicketCard(
-                            ticket: ticket,
-                            onUpdateStatus: (next) => kdsNotifier.updateTicketStatus(ticket.id, next),
-                            onToggleItem: (itemId) => kdsNotifier.toggleItemPrepared(ticket.id, itemId),
-                            onPrintKot: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => KotReceiptPreviewModal(ticket: ticket),
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: tickets.length,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: childAspectRatio,
+                            ),
+                            itemBuilder: (context, index) {
+                              final ticket = tickets[index];
+                              return KitchenTicketCard(
+                                ticket: ticket,
+                                onUpdateStatus: (next) => kdsNotifier.updateTicketStatus(ticket.id, next),
+                                onToggleItem: (itemId) => kdsNotifier.toggleItemPrepared(ticket.id, itemId),
+                                onPrintKot: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => KotReceiptPreviewModal(ticket: ticket),
+                                  );
+                                },
                               );
                             },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
           ),
         ],
       ),
