@@ -22,7 +22,7 @@ class KitchenFilterHeader extends StatefulWidget {
   final ValueChanged<String> onSearch;
   final VoidCallback onRefresh;
   final bool isSoundEnabled;
-  final VoidCallback onToggleSound;
+  final VoidCallback? onToggleSound;
   final bool isStandalone;
   final VoidCallback? onExitStandalone;
 
@@ -195,28 +195,30 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
               ),
               const SizedBox(width: 10),
 
-              // Audio Alert Toggle
-              Tooltip(
-                message: widget.isSoundEnabled ? 'Sound Alerts: ON' : 'Sound Alerts: OFF',
-                child: Container(
-                  height: 42,
-                  width: 42,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: IconButton(
-                    onPressed: widget.onToggleSound,
-                    icon: Icon(
-                      widget.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                      size: 20,
-                      color: widget.isSoundEnabled ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+              // Audio Alert Toggle (only shown when sound toggle is provided)
+              if (widget.onToggleSound != null) ...[
+                Tooltip(
+                  message: widget.isSoundEnabled ? 'Sound Alerts: ON' : 'Sound Alerts: OFF',
+                  child: Container(
+                    height: 42,
+                    width: 42,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: IconButton(
+                      onPressed: widget.onToggleSound,
+                      icon: Icon(
+                        widget.isSoundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                        size: 20,
+                        color: widget.isSoundEnabled ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
+              ],
 
               // Manual Sync / Refresh Button
               Tooltip(

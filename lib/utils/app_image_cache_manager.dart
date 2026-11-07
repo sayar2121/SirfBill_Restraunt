@@ -125,10 +125,17 @@ class AppImageCacheManager {
 
   Future<Uint8List?> _download(String url) async {
     try {
-      final uri = Uri.tryParse(url);
+      var targetUrl = url;
+      // Auto-append thumbnail width for Wikimedia Special:FilePath if not already present
+      if (targetUrl.contains('commons.wikimedia.org/wiki/Special:FilePath') &&
+          !targetUrl.contains('width=')) {
+        targetUrl = targetUrl.contains('?') ? '$targetUrl&width=400' : '$targetUrl?width=400';
+      }
+
+      final uri = Uri.tryParse(targetUrl);
       if (uri == null) return null;
 
-      // 1. First attempt with a quick 4-second timeout
+      // 1. Primary attempt with a 10-second timeout (giving ample time on slower networks)
       try {
         final response = await http.get(
           uri,
@@ -136,7 +143,7 @@ class AppImageCacheManager {
             'User-Agent': 'SirfBillRestaurant/1.0 (https://naiyo24.com; contact@naiyo24.com)',
             'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
           },
-        ).timeout(const Duration(seconds: 4));
+        ).timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
           return response.bodyBytes;
@@ -147,7 +154,7 @@ class AppImageCacheManager {
 
       // 2. If the URL was routed through backend image-proxy and failed/timed out,
       // fallback directly to the original target URL so images still load even if the proxy hangs
-      if (url.contains('/api/restaurant/menu/image-proxy') && url.contains('url=')) {
+      if (targetUrl.contains('/api/restaurant/menu/image-proxy') && targetUrl.contains('url=')) {
         try {
           final queryParam = uri.queryParameters['url'];
           if (queryParam != null && queryParam.isNotEmpty) {
@@ -159,7 +166,7 @@ class AppImageCacheManager {
                   'User-Agent': 'SirfBillRestaurant/1.0 (https://naiyo24.com; contact@naiyo24.com)',
                   'Accept': 'image/*,*/*',
                 },
-              ).timeout(const Duration(seconds: 4));
+              ).timeout(const Duration(seconds: 10));
 
               if (directResp.statusCode == 200 && directResp.bodyBytes.isNotEmpty) {
                 return directResp.bodyBytes;

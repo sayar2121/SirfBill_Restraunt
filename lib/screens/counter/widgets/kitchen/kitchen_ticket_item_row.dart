@@ -4,12 +4,14 @@ import '../../../../models/restaurant_pos_models.dart';
 /// Reusable individual food item row for Kitchen Ticket Card
 class KitchenTicketItemRow extends StatelessWidget {
   final KotItem item;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
+  final bool isReadOnly;
 
   const KitchenTicketItemRow({
     super.key,
     required this.item,
-    required this.onToggle,
+    this.onToggle,
+    this.isReadOnly = false,
   });
 
   @override
@@ -18,7 +20,7 @@ class KitchenTicketItemRow extends StatelessWidget {
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
 
     return InkWell(
-      onTap: onToggle,
+      onTap: isReadOnly ? null : onToggle,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),

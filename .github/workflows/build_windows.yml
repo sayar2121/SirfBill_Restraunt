@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.7
+      RELEASE_TAG: v1.0.8
 
     steps:
       - name: Checkout Code
@@ -101,7 +101,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [NETWORK] Updated default backend server IP to http://192.168.0.159:8000\n• [SETTINGS] In-app Server IP & URL configuration dialog on Dashboard\n• [KDS REDESIGN] Dedicated fullscreen Kitchen Display mode without POS top bar\n• [KDS QUEUE] Live dynamic SLA timers, touch item strike-through, and default active queue filter\n• [SESSION ISOLATION] AppSessionManager wipes cross-tenant memory & Riverpod state on login/logout\n• [PERFORMANCE] 20-image batch preloading with multi-tier RAM and persistent disk caching",
+            "release_notes": "• [KDS POS VIEW] POS billing Kitchen tab is now an informative read-only overview (no action buttons, no audio alerts)\n• [KDS SOUND] Custom order_ring.mp3 audio alert plays exclusively in Dedicated Kitchen Display mode\n• [IMAGE LOADING] 99% bandwidth reduction on Wikimedia images with width=400 thumbnail resolution & 10s timeout\n• [KDS FILTERS] Takeaway/Delivery settled orders auto-marked served & hidden from Active Queue",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

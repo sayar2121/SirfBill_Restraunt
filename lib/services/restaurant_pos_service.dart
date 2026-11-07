@@ -11,8 +11,14 @@ class RestaurantPosService {
   /// Helper to ensure relative URLs and external CORS-blocked URLs (e.g. Wikimedia) resolve properly
   static String? resolveImageUrl(dynamic rawUrl) {
     if (rawUrl == null) return null;
-    final str = rawUrl.toString().trim();
+    var str = rawUrl.toString().trim();
     if (str.isEmpty) return null;
+
+    // For Wikimedia Commons Special:FilePath images, append width thumbnail (width=400)
+    // to avoid downloading huge 10MB-20MB original raw camera files!
+    if (str.contains("commons.wikimedia.org/wiki/Special:FilePath") && !str.contains("width=")) {
+      str = str.contains("?") ? "$str&width=400" : "$str?width=400";
+    }
 
     final base = ApiConstants.baseUrl.endsWith("/")
         ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)

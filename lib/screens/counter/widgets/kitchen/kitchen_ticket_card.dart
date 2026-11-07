@@ -6,16 +6,18 @@ import 'kitchen_ticket_item_row.dart';
 
 class KitchenTicketCard extends StatelessWidget {
   final KitchenTicket ticket;
-  final ValueChanged<KotStatus> onUpdateStatus;
-  final ValueChanged<String> onToggleItem;
+  final ValueChanged<KotStatus>? onUpdateStatus;
+  final ValueChanged<String>? onToggleItem;
   final VoidCallback onPrintKot;
+  final bool isReadOnly;
 
   const KitchenTicketCard({
     super.key,
     required this.ticket,
-    required this.onUpdateStatus,
-    required this.onToggleItem,
+    this.onUpdateStatus,
+    this.onToggleItem,
     required this.onPrintKot,
+    this.isReadOnly = false,
   });
 
   @override
@@ -220,7 +222,8 @@ class KitchenTicketCard extends StatelessWidget {
                 final it = ticket.items[idx];
                 return KitchenTicketItemRow(
                   item: it,
-                  onToggle: () => onToggleItem(it.id),
+                  onToggle: isReadOnly ? null : () => onToggleItem?.call(it.id),
+                  isReadOnly: isReadOnly,
                 );
               },
             ),
@@ -253,62 +256,92 @@ class KitchenTicketCard extends StatelessWidget {
             ),
           ],
 
-          // 4. Action Progression Button: Start Prep / Mark Ready / Mark Served
+          // 4. Status Indicator / Action Progression Button
           Padding(
             padding: const EdgeInsets.all(12),
             child: SizedBox(
               width: double.infinity,
               height: 42,
-              child: nextStatus != null
-                  ? ElevatedButton(
-                      onPressed: () => onUpdateStatus(nextStatus!),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: (nextStatus == KotStatus.ready && !allItemsPrepared)
-                            ? statusColor.withValues(alpha: 0.85)
-                            : statusColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 0,
+              child: isReadOnly
+                  ? Container(
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.35)),
                       ),
+                      alignment: Alignment.center,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(actionIcon, size: 16),
+                          Icon(actionIcon, size: 16, color: statusColor),
                           const SizedBox(width: 6),
                           Text(
-                            nextStatus == KotStatus.ready && allItemsPrepared
-                                ? 'All Prepared • Ready'
-                                : nextActionLabel,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded, size: 14),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle_rounded, size: 17, color: Color(0xFF6366F1)),
-                          SizedBox(width: 6),
-                          Text(
-                            'Order Fully Served',
+                            ticket.status == KotStatus.newOrder
+                                ? 'New Order • In Queue'
+                                : (ticket.status == KotStatus.preparing
+                                    ? 'Kitchen In Prep'
+                                    : (ticket.status == KotStatus.ready
+                                        ? 'Food Ready • Waiting for Pickup'
+                                        : 'Order Fully Served')),
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF6366F1),
+                              color: statusColor,
                             ),
                           ),
                         ],
                       ),
-                    ),
+                    )
+                  : (nextStatus != null
+                      ? ElevatedButton(
+                          onPressed: () => onUpdateStatus?.call(nextStatus!),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: (nextStatus == KotStatus.ready && !allItemsPrepared)
+                                ? statusColor.withValues(alpha: 0.85)
+                                : statusColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(actionIcon, size: 16),
+                              const SizedBox(width: 6),
+                              Text(
+                                nextStatus == KotStatus.ready && allItemsPrepared
+                                    ? 'All Prepared • Ready'
+                                    : nextActionLabel,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.arrow_forward_rounded, size: 14),
+                            ],
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 17, color: Color(0xFF6366F1)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Order Fully Served',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF6366F1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
             ),
           ),
         ],

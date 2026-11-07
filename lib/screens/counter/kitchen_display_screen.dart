@@ -17,7 +17,6 @@ class KitchenDisplayScreen extends ConsumerStatefulWidget {
 }
 
 class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
-  bool _isSoundEnabled = true;
   Timer? _liveClockTimer;
 
   @override
@@ -36,10 +35,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   }
 
   void _toggleSound() {
-    setState(() => _isSoundEnabled = !_isSoundEnabled);
+    ref.read(kitchenDisplayProvider.notifier).toggleSound();
+    final isSound = ref.read(kitchenDisplayProvider).isSoundEnabled;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isSoundEnabled ? 'KDS Sound alerts enabled' : 'KDS Sound alerts muted'),
+        content: Text(isSound ? 'KDS Sound alerts enabled' : 'KDS Sound alerts muted'),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -116,8 +116,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             onSelectAll: kdsNotifier.showAll,
             onSelectType: kdsNotifier.setTypeFilter,
             onSearch: kdsNotifier.setSearchQuery,
-            isSoundEnabled: _isSoundEnabled,
-            onToggleSound: _toggleSound,
+            isSoundEnabled: widget.isStandalone && kdsState.isSoundEnabled,
+            onToggleSound: widget.isStandalone ? _toggleSound : null,
             isStandalone: widget.isStandalone,
             onExitStandalone: _handleExitStandalone,
             onRefresh: () async {
@@ -218,8 +218,13 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                               final ticket = tickets[index];
                               return KitchenTicketCard(
                                 ticket: ticket,
-                                onUpdateStatus: (next) => kdsNotifier.updateTicketStatus(ticket.id, next),
-                                onToggleItem: (itemId) => kdsNotifier.toggleItemPrepared(ticket.id, itemId),
+                                isReadOnly: !widget.isStandalone,
+                                onUpdateStatus: widget.isStandalone
+                                    ? (next) => kdsNotifier.updateTicketStatus(ticket.id, next)
+                                    : null,
+                                onToggleItem: widget.isStandalone
+                                    ? (itemId) => kdsNotifier.toggleItemPrepared(ticket.id, itemId)
+                                    : null,
                                 onPrintKot: () {
                                   showDialog(
                                     context: context,
