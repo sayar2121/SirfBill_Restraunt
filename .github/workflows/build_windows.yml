@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.6
+      RELEASE_TAG: v1.0.7
 
     steps:
       - name: Checkout Code
@@ -38,7 +38,7 @@ jobs:
       - name: Create .env File
         shell: pwsh
         run: |
-          Set-Content -Path ".env" -Value "API_BASE_URL=http://192.168.0.31:8000"
+          Set-Content -Path ".env" -Value "API_BASE_URL=http://192.168.0.159:8000"
 
       - name: Build Flutter Windows App (Release)
         shell: pwsh
@@ -101,7 +101,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [KDS REDESIGN] Dedicated fullscreen Kitchen Display mode without POS top bar\n• [KDS QUEUE] Live dynamic SLA timers, touch item strike-through, and default active queue filter\n• [SESSION ISOLATION] AppSessionManager wipes cross-tenant memory & Riverpod state on login/logout\n• [PERFORMANCE] 20-image batch preloading with multi-tier RAM and persistent disk caching\n• [SEARCH] Added 300ms debouncing on POS and Menu search inputs for zero-lag typing",
+            "release_notes": "• [NETWORK] Updated default backend server IP to http://192.168.0.159:8000\n• [SETTINGS] In-app Server IP & URL configuration dialog on Dashboard\n• [KDS REDESIGN] Dedicated fullscreen Kitchen Display mode without POS top bar\n• [KDS QUEUE] Live dynamic SLA timers, touch item strike-through, and default active queue filter\n• [SESSION ISOLATION] AppSessionManager wipes cross-tenant memory & Riverpod state on login/logout\n• [PERFORMANCE] 20-image batch preloading with multi-tier RAM and persistent disk caching",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
