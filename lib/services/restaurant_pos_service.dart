@@ -401,6 +401,49 @@ class RestaurantPosService {
       if (res.statusCode == 200 && res.data != null) {
         final List list = res.data is List ? res.data : (res.data['tables'] ?? []);
 
+        // Fetch live orders to reconcile table occupancy accurately:
+        // A table remains OCCUPIED if there is any active or served Dine-In order
+        // that has not yet been paid/settled by the cashier.
+        final Map<String, dynamic> tableUnsettledOrderMap = {};
+        try {
+          final ordersRes = await _dio.get(
+            '/api/restaurant/orders',
+            queryParameters: {
+              if (outletId != null && outletId.isNotEmpty) 'outlet_id': outletId,
+              'limit': 50,
+            },
+          );
+          if (ordersRes.statusCode == 200 && ordersRes.data != null) {
+            final List ordersList = ordersRes.data is List
+                ? ordersRes.data
+                : (ordersRes.data['orders'] ?? ordersRes.data['items'] ?? []);
+            for (final o in ordersList) {
+              final oType = (o['order_type'] ?? 'DINE_IN').toString().toUpperCase();
+              if (!oType.contains('DINE')) continue;
+
+              final oStatus = (o['status'] ?? '').toString().toUpperCase();
+              if (oStatus.contains('CANCEL') ||
+                  oStatus.contains('VOID') ||
+                  oStatus.contains('SETTLE') ||
+                  oStatus.contains('COMPLET')) {
+                continue;
+              }
+
+              final paidAmt = double.tryParse((o['paid_amount'] ?? '0').toString()) ?? 0.0;
+              final grandTotal = double.tryParse((o['grand_total'] ?? o['total'] ?? '0').toString()) ?? 0.0;
+              // If not fully paid, this table is still occupied by guests
+              if (grandTotal > 0 && paidAmt >= grandTotal) {
+                continue;
+              }
+
+              final tid = o['table_id']?.toString();
+              if (tid != null && tid.isNotEmpty && !tableUnsettledOrderMap.containsKey(tid)) {
+                tableUnsettledOrderMap[tid] = o;
+              }
+            }
+          }
+        } catch (_) {}
+
         return list.map((json) {
           final tableId = json['id']?.toString() ?? '';
           final tableLabel = (json['table_number'] ?? json['label'] ?? json['name'] ?? '').toString();
@@ -415,12 +458,24 @@ class RestaurantPosService {
             status = TableStatus.available;
           }
 
-          final rawBill = json['active_order_grand_total'] ?? json['current_bill_amount'] ?? 0.0;
+          // Reconcile: If this table has an active/served unpaid order, keep it OCCUPIED
+          final unsettledOrder = tableUnsettledOrderMap[tableId];
+          if (unsettledOrder != null && status != TableStatus.occupied) {
+            status = TableStatus.occupied;
+          }
+
+          final rawBill = unsettledOrder != null
+              ? (unsettledOrder['grand_total'] ?? unsettledOrder['total'] ?? 0.0)
+              : (json['active_order_grand_total'] ?? json['current_bill_amount'] ?? 0.0);
           final currentBill = (rawBill is num) ? rawBill.toDouble() : (double.tryParse(rawBill.toString()) ?? 0.0);
-          final activeOrderCount = json['active_order_count'] ?? (status == TableStatus.occupied ? 1 : 0);
+          final activeOrderCount = unsettledOrder != null
+              ? 1
+              : (json['active_order_count'] ?? (status == TableStatus.occupied ? 1 : 0));
 
           String? durationStr;
-          final orderCreatedAtStr = json['active_order_created_at'] ?? json['occupied_since'];
+          final orderCreatedAtStr = unsettledOrder != null
+              ? (unsettledOrder['created_at'] ?? unsettledOrder['order_time'])
+              : (json['active_order_created_at'] ?? json['occupied_since']);
           if (status == TableStatus.occupied && orderCreatedAtStr != null) {
             try {
               final rawStr = orderCreatedAtStr.toString().trim();
