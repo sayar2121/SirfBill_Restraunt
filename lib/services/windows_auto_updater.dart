@@ -6,7 +6,22 @@ import 'package:path_provider/path_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import '../config/api_client.dart';
+
+Dio _getUpdaterDio() {
+  final dio = Dio();
+  if (!kIsWeb) {
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        return client;
+      },
+    );
+  }
+  return dio;
+}
 
 class AppUpdateInfo {
   final String latestVersion;
@@ -43,7 +58,7 @@ class WindowsAutoUpdater {
     try {
       // 1. Direct GitHub Releases check (with short 5-second timeout)
       try {
-        final ghResponse = await Dio().get(
+        final ghResponse = await _getUpdaterDio().get(
           'https://api.github.com/repos/$githubRepo/releases/latest',
           options: Options(
             sendTimeout: const Duration(seconds: 5),
@@ -108,7 +123,7 @@ class WindowsAutoUpdater {
 
       // 2. Secondary check via GitHub release manifest.json
       try {
-        final manifestResponse = await Dio().get(
+        final manifestResponse = await _getUpdaterDio().get(
           'https://github.com/$githubRepo/releases/latest/download/manifest.json',
           options: Options(
             sendTimeout: const Duration(seconds: 5),
@@ -291,30 +306,66 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
         debugPrint('[AutoUpdater] Downloading from ${widget.info.downloadUrl} to $filePath');
 
-        await Dio().download(
-          widget.info.downloadUrl,
-          filePath,
-          options: Options(
-            followRedirects: true,
-            maxRedirects: 5,
-          ),
-          onReceiveProgress: (received, total) {
-            if (total > 0) {
-              if (mounted) {
-                setState(() {
-                  _progress = received / total;
-                  _statusText = 'Downloading: ${(_progress * 100).toStringAsFixed(0)}%';
-                });
+        bool downloadSucceeded = false;
+
+        try {
+          await _getUpdaterDio().download(
+            widget.info.downloadUrl,
+            filePath,
+            options: Options(
+              followRedirects: true,
+              maxRedirects: 8,
+            ),
+            onReceiveProgress: (received, total) {
+              if (total > 0) {
+                if (mounted) {
+                  setState(() {
+                    _progress = received / total;
+                    _statusText = 'Downloading: ${(_progress * 100).toStringAsFixed(0)}%';
+                  });
+                }
+              } else {
+                if (mounted) {
+                  setState(() {
+                    _statusText = 'Downloading (${(received / (1024 * 1024)).toStringAsFixed(1)} MB)...';
+                  });
+                }
               }
-            } else {
-              if (mounted) {
-                setState(() {
-                  _statusText = 'Downloading (${(received / (1024 * 1024)).toStringAsFixed(1)} MB)...';
-                });
-              }
-            }
-          },
-        );
+            },
+          );
+
+          final checkFile = File(filePath);
+          if (await checkFile.exists() && await checkFile.length() > 1000) {
+            downloadSucceeded = true;
+          }
+        } catch (dioError) {
+          debugPrint('[AutoUpdater] Dio download error: $dioError. Attempting fallback via curl.exe...');
+        }
+
+        // Fallback: Use system curl.exe (with -k to bypass invalid SSL certificates on Windows)
+        if (!downloadSucceeded) {
+          if (mounted) {
+            setState(() {
+              _statusText = 'Downloading via system curl...';
+            });
+          }
+          final curlProcess = await Process.run('curl.exe', [
+            '-k', // Insecure / ignore missing local CA certificates
+            '-L', // Follow redirects (GitHub -> AWS S3)
+            '-f', // Fail on HTTP errors
+            '--retry', '3',
+            '-o', filePath,
+            widget.info.downloadUrl,
+          ]);
+
+          final checkFile = File(filePath);
+          if (curlProcess.exitCode == 0 && await checkFile.exists() && await checkFile.length() > 1000) {
+            downloadSucceeded = true;
+            debugPrint('[AutoUpdater] Download succeeded via curl.exe (${await checkFile.length()} bytes)');
+          } else {
+            throw Exception('Download failed via network and curl fallback: ${curlProcess.stderr}');
+          }
+        }
 
         if (mounted) {
           setState(() {

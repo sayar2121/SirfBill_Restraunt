@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.26
+      RELEASE_TAG: v1.0.27
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [AUTO-UPDATE] Auto UAC elevation & permissions check for Program Files\n• [AUTO-UPDATE] Terminate lingering instances & file retry logic for clean seamless updates\n• [UPDATER] Path normalization using native platform separators\n• [ORDERS & KDS] Full live order synchronization & fast report exports",
+            "release_notes": "• [AUTO-UPDATE FIX] Resolved CERTIFICATE_VERIFY_FAILED SSL handshake error on Windows\n• [DOWNLOAD FALLBACK] Added system curl.exe fallback to guarantee download even if SSL chain is missing\n• [AUTO-UPDATE] Auto UAC elevation & permissions check for Program Files\n• [ORDERS & KDS] Full live order synchronization & fast report exports",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
