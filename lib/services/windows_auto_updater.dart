@@ -347,16 +347,24 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         }
 
         // Direct installer execution:
-        // Launch Setup.exe with /SILENT or interactive run so it can update SirfBill Restaurant
-        debugPrint('[AutoUpdater] Launching installer: $filePath');
+        // Create a batch script launcher to reliably wait for Flutter to exit, then run Setup
+        final launcherBat = File('${tempDir.path}\\launch_setup.bat');
+        final batContent = '''
+@echo off
+timeout /t 1 /nobreak >nul
+start "" "$filePath" /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS
+exit
+''';
+        await launcherBat.writeAsString(batContent);
+        debugPrint('[AutoUpdater] Created launcher script: ${launcherBat.path}');
+
         await Process.start(
-          filePath,
-          ['/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
+          'cmd.exe',
+          ['/c', launcherBat.path],
           mode: ProcessStartMode.detached,
         );
 
-        // Give the spawned installer process a moment to initialize before exiting
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 300));
         exit(0);
       } catch (e) {
         debugPrint('[AutoUpdater] Download or execution failed: $e');
