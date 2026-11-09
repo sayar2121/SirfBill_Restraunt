@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.18
+      RELEASE_TAG: v1.0.19
 
     steps:
       - name: Checkout Code

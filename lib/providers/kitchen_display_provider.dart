@@ -368,13 +368,20 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   }
 
   void setDatePreset(DateRangePreset preset) {
-    state = state.copyWith(datePreset: preset, customRange: () => null);
+    state = state.copyWith(
+      datePreset: preset,
+      customRange: () => null,
+      onlyActive: false,
+      onlyDelayed: false,
+    );
   }
 
   void setCustomRange(DateTimeRange? range) {
     state = state.copyWith(
       datePreset: DateRangePreset.custom,
       customRange: () => range,
+      onlyActive: false,
+      onlyDelayed: false,
     );
   }
 
