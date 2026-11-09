@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.15
+      RELEASE_TAG: v1.0.16
 
     steps:
       - name: Checkout Code
@@ -118,7 +118,7 @@ jobs:
             "version": "$cleanVersion",
             "mandatory": false,
             "release_notes": "• [TABLE RESERVATION] Tables strictly remain occupied while food is served and only release to available upon payment settlement\n• [UI COLOR CODING] Table selection chips dynamically color code: red for occupied, amber for reserved, green for empty\n• [KDS AUDIO & LOGO] Muted POS KDS audio and isolated standalone KDS logo header\n• [UPDATER] Diagnostic logging, accurate process termination and safe fallback recovery",
-            "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
+            "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/Sirfbill_Restaurant_Setup.exe",
             "sha256": "$env:SHA256"
           }
           "@

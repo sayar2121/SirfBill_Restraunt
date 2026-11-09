@@ -49,8 +49,9 @@ class RestaurantTableService {
 
               final paidAmt = double.tryParse((o['paid_amount'] ?? '0').toString()) ?? 0.0;
               final grandTotal = double.tryParse((o['grand_total'] ?? o['total'] ?? '0').toString()) ?? 0.0;
-              // If not fully paid, this table is still occupied by guests
-              if (grandTotal > 0 && paidAmt >= grandTotal) {
+              final lines = o['lines'] as List? ?? [];
+              // Ignore empty dummy orders or fully paid orders
+              if (grandTotal <= 0 || lines.isEmpty || paidAmt >= grandTotal) {
                 continue;
               }
 

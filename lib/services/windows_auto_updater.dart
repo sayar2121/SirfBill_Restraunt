@@ -62,10 +62,10 @@ class WindowsAutoUpdater {
 
           final assets = data['assets'] as List? ?? [];
           String downloadUrl = '';
-          // Prefer app-update.zip for smooth in-app delta update via updater.exe, fallback to .exe setup
+          // Prefer Sirfbill_Restaurant_Setup.exe for clean, reliable 1-click update installation
           for (var asset in assets) {
             final name = (asset['name'] ?? '').toString().toLowerCase();
-            if (name == 'app-update.zip') {
+            if (name.endsWith('.exe') && name.contains('setup')) {
               downloadUrl = asset['browser_download_url'] ?? '';
               break;
             }
@@ -74,6 +74,15 @@ class WindowsAutoUpdater {
             for (var asset in assets) {
               final name = (asset['name'] ?? '').toString().toLowerCase();
               if (name.endsWith('.exe')) {
+                downloadUrl = asset['browser_download_url'] ?? '';
+                break;
+              }
+            }
+          }
+          if (downloadUrl.isEmpty) {
+            for (var asset in assets) {
+              final name = (asset['name'] ?? '').toString().toLowerCase();
+              if (name == 'app-update.zip') {
                 downloadUrl = asset['browser_download_url'] ?? '';
                 break;
               }
