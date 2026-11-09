@@ -40,6 +40,21 @@ jobs:
         run: |
           Set-Content -Path ".env" -Value "API_BASE_URL=http://192.168.0.159:8000"
 
+      - name: Pre-fetch PDFium Binaries
+        shell: pwsh
+        run: |
+          $destDir = "build/windows/x64/pdfium-download/pdfium-download-prefix/src"
+          New-Item -ItemType Directory -Force -Path $destDir
+          $pdfiumUrl = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/5200/pdfium-win-x64.tgz"
+          $destFile = Join-Path $destDir "pdfium-win-x64.tgz"
+          Write-Host "Pre-downloading PDFium from $pdfiumUrl..."
+          curl.exe -fSL --retry 5 --retry-delay 3 $pdfiumUrl -o $destFile
+          if (Test-Path $destFile) {
+            Write-Host "PDFium pre-downloaded successfully: $((Get-Item $destFile).Length) bytes"
+          } else {
+            Write-Warning "Could not pre-download PDFium; CMake will attempt download during build."
+          }
+
       - name: Build Flutter Windows App (Release)
         shell: pwsh
         run: |
