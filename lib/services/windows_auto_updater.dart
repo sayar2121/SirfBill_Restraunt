@@ -62,10 +62,10 @@ class WindowsAutoUpdater {
 
           final assets = data['assets'] as List? ?? [];
           String downloadUrl = '';
-          // Prefer Sirfbill_Restaurant_Setup.exe for clean, reliable 1-click update installation
+          // Prefer app-update.zip for silent in-app delta update via updater.exe, fallback to Setup.exe
           for (var asset in assets) {
             final name = (asset['name'] ?? '').toString().toLowerCase();
-            if (name.endsWith('.exe') && name.contains('setup')) {
+            if (name == 'app-update.zip') {
               downloadUrl = asset['browser_download_url'] ?? '';
               break;
             }
@@ -73,7 +73,7 @@ class WindowsAutoUpdater {
           if (downloadUrl.isEmpty) {
             for (var asset in assets) {
               final name = (asset['name'] ?? '').toString().toLowerCase();
-              if (name.endsWith('.exe')) {
+              if (name.endsWith('.exe') && name.contains('setup')) {
                 downloadUrl = asset['browser_download_url'] ?? '';
                 break;
               }
@@ -82,7 +82,7 @@ class WindowsAutoUpdater {
           if (downloadUrl.isEmpty) {
             for (var asset in assets) {
               final name = (asset['name'] ?? '').toString().toLowerCase();
-              if (name == 'app-update.zip') {
+              if (name.endsWith('.exe')) {
                 downloadUrl = asset['browser_download_url'] ?? '';
                 break;
               }
@@ -332,6 +332,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         if (isZip) {
           final updaterFile = File('${app.parent.path}\\updater.exe');
           if (await updaterFile.exists()) {
+            debugPrint('[AutoUpdater] Launching updater.exe with package: $filePath');
             await Process.start(
               updaterFile.path,
               [
@@ -342,6 +343,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               ],
               mode: ProcessStartMode.detached,
             );
+            await Future.delayed(const Duration(milliseconds: 300));
             exit(0);
           }
         }
