@@ -18,6 +18,7 @@ class OrderFilterHeader extends StatelessWidget {
   final ValueChanged<String> onSearch;
   final VoidCallback onNewOrder;
   final VoidCallback? onRefresh;
+  final VoidCallback? onExport;
   final bool isLoading;
 
   const OrderFilterHeader({
@@ -37,6 +38,7 @@ class OrderFilterHeader extends StatelessWidget {
     required this.onSearch,
     required this.onNewOrder,
     this.onRefresh,
+    this.onExport,
     this.isLoading = false,
   });
 
@@ -160,6 +162,40 @@ class OrderFilterHeader extends StatelessWidget {
                                     child: CircularProgressIndicator(strokeWidth: 2.2, color: Color(0xFF10B981)),
                                   )
                                 : const Icon(Icons.refresh_rounded, size: 22, color: Color(0xFF10B981)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (onExport != null) ...[
+                    const SizedBox(width: 10),
+                    Tooltip(
+                      message: 'Export Orders (Excel / PDF)',
+                      child: InkWell(
+                        onTap: onExport,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4), width: 1.2),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.file_download_outlined, size: 20, color: Color(0xFF10B981)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Export Data',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

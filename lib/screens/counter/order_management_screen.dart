@@ -11,6 +11,7 @@ import '../../utils/pdf_thermal_generator.dart';
 import 'widgets/billing/kot_print_dialog.dart';
 import 'widgets/orders/order_card.dart';
 import 'widgets/orders/order_filter_header.dart';
+import 'widgets/orders/order_report_export_helper.dart';
 import 'widgets/orders/order_detail_modal.dart';
 import 'widgets/pos/pos_bill_receipt_modal.dart';
 
@@ -48,6 +49,14 @@ class OrderManagementScreen extends ConsumerWidget {
             onSelectCustomRange: orderNotifier.setCustomRange,
             onSearch: orderNotifier.setSearchQuery,
             onNewOrder: () => context.go('/counter/billing'),
+            onExport: () {
+              OrderReportExportHelper.showExportOptions(
+                context: context,
+                orders: orders,
+                datePreset: orderState.datePreset,
+                customRange: orderState.customRange,
+              );
+            },
           ),
 
           // 2. Responsive Order Matrix

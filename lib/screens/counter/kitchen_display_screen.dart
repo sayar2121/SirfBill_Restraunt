@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/app_session_manager.dart';
+import '../../services/kitchen_audio_service.dart';
 import '../../providers/kitchen_display_provider.dart';
 import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
@@ -45,9 +46,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   @override
   void dispose() {
     _liveClockTimer?.cancel();
-    if (widget.isStandalone) {
-      ref.read(kitchenDisplayProvider.notifier).clearPendingAlert();
-    }
+    KitchenAudioService.stop();
     super.dispose();
   }
 
