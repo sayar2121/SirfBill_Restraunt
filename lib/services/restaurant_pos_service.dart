@@ -400,7 +400,11 @@ class RestaurantPosService {
       );
       if (res.statusCode == 200 && res.data != null) {
         final List list = res.data is List ? res.data : (res.data['tables'] ?? []);
+
         return list.map((json) {
+          final tableId = json['id']?.toString() ?? '';
+          final tableLabel = (json['table_number'] ?? json['label'] ?? json['name'] ?? '').toString();
+
           final rawStatus = (json['status'] ?? '').toString().toLowerCase();
           TableStatus status = TableStatus.available;
           if (rawStatus == 'occupied') {
@@ -413,14 +417,13 @@ class RestaurantPosService {
 
           final rawBill = json['active_order_grand_total'] ?? json['current_bill_amount'] ?? 0.0;
           final currentBill = (rawBill is num) ? rawBill.toDouble() : (double.tryParse(rawBill.toString()) ?? 0.0);
+          final activeOrderCount = json['active_order_count'] ?? (status == TableStatus.occupied ? 1 : 0);
 
           String? durationStr;
           final orderCreatedAtStr = json['active_order_created_at'] ?? json['occupied_since'];
           if (status == TableStatus.occupied && orderCreatedAtStr != null) {
             try {
               final rawStr = orderCreatedAtStr.toString().trim();
-              // Backend ISO timestamps from Python utcnow() do not include 'Z', causing Dart to parse them as local IST!
-              // Since IST is UTC+5:30, DateTime.now() - local(utc) produces exactly 05:30!
               final isoUtc = (rawStr.endsWith('Z') || rawStr.contains('+'))
                   ? rawStr
                   : '${rawStr}Z';
@@ -442,14 +445,14 @@ class RestaurantPosService {
           }
 
           return DiningTable(
-            id: json['id']?.toString() ?? '',
-            label: json['table_number'] ?? json['label'] ?? json['name'] ?? '',
+            id: tableId,
+            label: tableLabel,
             capacity: json['capacity'] ?? 4,
             status: status,
             floor: json['floor'] ?? json['section'] ?? 'Floor 1',
             occupiedDuration: durationStr,
             currentBillAmount: currentBill,
-            activeOrderCount: json['active_order_count'] ?? (status == TableStatus.occupied ? 1 : 0),
+            activeOrderCount: activeOrderCount is int ? activeOrderCount : int.tryParse(activeOrderCount.toString()) ?? (status == TableStatus.occupied ? 1 : 0),
           );
         }).toList();
       }
@@ -520,15 +523,25 @@ class RestaurantPosService {
   static Future<bool> updateTableStatus(String tableId, TableStatus status) async {
     try {
       final statusStr = status == TableStatus.available
-          ? 'VACANT'
+          ? 'AVAILABLE'
           : (status == TableStatus.occupied ? 'OCCUPIED' : 'RESERVED');
       final res = await _dio.patch(
         '/api/restaurant/tables/$tableId/status',
-        data: {'status': statusStr},
+        data: {'status': statusStr, 'table_status': statusStr},
       );
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (e) {
       debugPrint('Error updating table status on backend: $e');
+      // If AVAILABLE failed, retry with VACANT for compatibility
+      if (status == TableStatus.available) {
+        try {
+          final retryRes = await _dio.patch(
+            '/api/restaurant/tables/$tableId/status',
+            data: {'status': 'VACANT'},
+          );
+          return retryRes.statusCode == 200 || retryRes.statusCode == 204;
+        } catch (_) {}
+      }
       return false;
     }
   }

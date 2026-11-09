@@ -25,6 +25,16 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   @override
   void initState() {
     super.initState();
+    // In dedicated standalone KDS mode (/kitchen), sound alert is enabled for the kitchen tablet/monitor.
+    // In POS counter billing tab, it remains completely muted.
+    if (widget.isStandalone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !ref.read(kitchenDisplayProvider).isSoundEnabled) {
+          ref.read(kitchenDisplayProvider.notifier).toggleSound();
+        }
+      });
+    }
+
     // Live clock timer for re-evaluating SLA elapsed minutes every 30 seconds
     _liveClockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
@@ -34,6 +44,9 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   @override
   void dispose() {
     _liveClockTimer?.cancel();
+    if (widget.isStandalone) {
+      ref.read(kitchenDisplayProvider.notifier).clearPendingAlert();
+    }
     super.dispose();
   }
 

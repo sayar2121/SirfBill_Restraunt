@@ -102,18 +102,20 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
             ),
             child: Row(
               children: [
-                Image.asset(
-                  isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
-                  height: 38,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 14),
-                Container(
-                  height: 28,
-                  width: 1.5,
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                ),
-                const SizedBox(width: 14),
+                if (widget.isStandalone) ...[
+                  Image.asset(
+                    isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
+                    height: 38,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: 14),
+                  Container(
+                    height: 28,
+                    width: 1.5,
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                  const SizedBox(width: 14),
+                ],
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,

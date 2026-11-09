@@ -155,6 +155,15 @@ class PosTableSelector extends StatelessWidget {
                       final table = displayList[index];
                       final isSelected = table.id == selectedTableId;
                       final isOccupied = table.status == TableStatus.occupied;
+                      final isReserved = table.status == TableStatus.reserved;
+
+                      // Color coding:
+                      // Occupied = Amber/Orange/Red (Warm)
+                      // Reserved = Amber (Warm)
+                      // Available/Empty = Emerald/Green
+                      final statusPrimaryColor = isOccupied
+                          ? const Color(0xFFEF4444)
+                          : (isReserved ? const Color(0xFFF59E0B) : const Color(0xFF10B981));
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -164,24 +173,26 @@ class PosTableSelector extends StatelessWidget {
                           width: 88,
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isOccupied
-                                ? (isSelected
-                                    ? const Color(0xFFEF4444)
-                                    : (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEF2F2)))
-                                : (isSelected
-                                    ? const Color(0xFF10B981)
-                                    : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC))),
+                            color: isSelected
+                                ? statusPrimaryColor
+                                : (isOccupied
+                                    ? (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEF2F2))
+                                    : (isReserved
+                                        ? (isDark ? const Color(0xFF452B0E) : const Color(0xFFFFFBEB))
+                                        : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)))),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isOccupied
-                                  ? const Color(0xFFEF4444)
-                                  : (isSelected ? const Color(0xFF10B981) : borderColor),
+                              color: isSelected
+                                  ? statusPrimaryColor
+                                  : (isOccupied
+                                      ? const Color(0xFFFCA5A5)
+                                      : (isReserved ? const Color(0xFFFCD34D) : borderColor)),
                               width: isSelected ? 2.5 : 1.2,
                             ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)).withValues(alpha: 0.35),
+                                      color: statusPrimaryColor.withValues(alpha: 0.35),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     ),
@@ -200,8 +211,10 @@ class PosTableSelector extends StatelessWidget {
                                   color: isSelected
                                       ? Colors.white
                                       : (isOccupied
-                                          ? const Color(0xFFEF4444)
-                                          : (isDark ? Colors.white : const Color(0xFF0F172A))),
+                                          ? const Color(0xFFDC2626)
+                                          : (isReserved
+                                              ? const Color(0xFFD97706)
+                                              : (isDark ? Colors.white : const Color(0xFF0F172A)))),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -214,15 +227,17 @@ class PosTableSelector extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   color: isSelected
                                       ? Colors.white.withValues(alpha: 0.9)
-                                      : (isOccupied ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
+                                      : (isOccupied
+                                          ? const Color(0xFFDC2626)
+                                          : (isReserved ? const Color(0xFFB45309) : const Color(0xFF64748B))),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
-                              if (table.occupiedDuration != null)
+                              if (isOccupied && table.occupiedDuration != null)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
                                     color: isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(4),
@@ -240,13 +255,17 @@ class PosTableSelector extends StatelessWidget {
                                 )
                               else
                                 Text(
-                                  isOccupied ? 'Occupied' : 'Empty',
+                                  isOccupied
+                                      ? 'Occupied'
+                                      : (isReserved ? 'Reserved' : 'Empty'),
                                   style: TextStyle(
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.bold,
                                     color: isSelected
-                                        ? Colors.white.withValues(alpha: 0.85)
-                                        : (isOccupied ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                                        ? Colors.white.withValues(alpha: 0.9)
+                                        : (isOccupied
+                                            ? const Color(0xFFEF4444)
+                                            : (isReserved ? const Color(0xFFF59E0B) : const Color(0xFF10B981))),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

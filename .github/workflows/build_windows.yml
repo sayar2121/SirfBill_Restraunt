@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.10
+      RELEASE_TAG: v1.0.12
 
     steps:
       - name: Checkout Code
@@ -101,7 +101,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [KDS ALERT MODAL] Prominent interactive dialog pops up on new incoming orders with looping ring audio\n• [KDS PREP TIMER] Preparation timer starts from 00:00 only when kitchen staff taps 'Accept & Start Prep'\n• [KDS POLLING] Ultra-fast 4s sync interval for near real-time order arrival on KDS\n• [KDS ROLES] POS billing Kitchen tab is read-only and muted, while Dedicated KDS has full interactive prep controls",
+            "release_notes": "• [TABLE RESERVATION] Tables strictly remain occupied while food is served and only release to available upon payment settlement\n• [UI COLOR CODING] Table selection chips dynamically color code: red for occupied, amber for reserved, green for empty\n• [KDS AUDIO & LOGO] Muted POS KDS audio and isolated standalone KDS logo header\n• [UPDATER] Diagnostic logging, accurate process termination and safe fallback recovery",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

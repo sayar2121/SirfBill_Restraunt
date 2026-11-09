@@ -109,11 +109,18 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
 
     ref.onDispose(() {
       _pollingTimer?.cancel();
+      KitchenAudioService.stop();
     });
 
-    // Initial fetch from backend - default to onlyActive = true so old served orders are hidden by default!
+    // Initial fetch from backend - default sound to false (muted) so POS billing & normal tabs never ring audio!
+    // Sound is only active when explicitly enabled in dedicated KDS mode (/kitchen).
     Future.microtask(() => loadTickets());
-    return const KitchenDisplayState(tickets: [], isLoading: true, onlyActive: true);
+    return const KitchenDisplayState(
+      tickets: [],
+      isLoading: true,
+      onlyActive: true,
+      isSoundEnabled: false,
+    );
   }
 
   /// Fetch live orders from backend and map them into active KDS tickets
@@ -368,6 +375,26 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         orderId: ticketId,
         targetStatus: backendStatus,
       );
+
+      // Important: When marking "Served", if this ticket belongs to a Dine-In table,
+      // explicitly ensure the table stays OCCUPIED until the cashier completes payment!
+      if (nextStatus == KotStatus.served) {
+        final ticket = state.tickets.where((t) => t.id == ticketId).firstOrNull;
+        if (ticket != null && ticket.orderType == OrderType.dineIn) {
+          // Keep table marked as OCCUPIED so table occupancy is not lost when order is served
+          final tableLabel = ticket.tableLabel;
+          if (tableLabel != null && tableLabel.isNotEmpty) {
+            final outletId = await InventoryService.getShopId();
+            final tables = await RestaurantPosService.fetchTables(outletId: outletId);
+            final match = tables.where((tbl) =>
+                tbl.id == tableLabel ||
+                tbl.label.toLowerCase() == tableLabel.toLowerCase()).firstOrNull;
+            if (match != null) {
+              await RestaurantPosService.updateTableStatus(match.id, TableStatus.occupied);
+            }
+          }
+        }
+      }
     } catch (e) {
       debugPrint('Error syncing KDS status with backend: $e');
     }
