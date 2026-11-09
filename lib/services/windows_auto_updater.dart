@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -96,7 +97,40 @@ class WindowsAutoUpdater {
         debugPrint('[AutoUpdater] GitHub release check error: $e');
       }
 
-      // 2. Secondary Backend API endpoint check (/api/app-version)
+      // 2. Secondary check via GitHub release manifest.json
+      try {
+        final manifestResponse = await Dio().get(
+          'https://github.com/$githubRepo/releases/latest/download/manifest.json',
+          options: Options(
+            sendTimeout: const Duration(seconds: 5),
+            receiveTimeout: const Duration(seconds: 5),
+            headers: {'User-Agent': 'SirfBill-Updater'},
+          ),
+        );
+        if (manifestResponse.statusCode == 200 && manifestResponse.data != null) {
+          final mData = manifestResponse.data is Map<String, dynamic>
+              ? manifestResponse.data as Map<String, dynamic>
+              : (manifestResponse.data is String ? jsonDecode(manifestResponse.data as String) as Map<String, dynamic> : <String, dynamic>{});
+          final v = (mData['version'] ?? '').toString().trim();
+          final pkgUrl = (mData['package_url'] ?? '').toString();
+          final notes = (mData['release_notes'] ?? 'General improvements and bug fixes.').toString();
+          if (v.isNotEmpty && pkgUrl.isNotEmpty) {
+            final packageInfo = await PackageInfo.fromPlatform();
+            if (_isNewerVersion(packageInfo.version, v)) {
+              return AppUpdateInfo(
+                latestVersion: v,
+                downloadUrl: pkgUrl,
+                releaseNotes: notes,
+              );
+            }
+            return null; // Already up-to-date
+          }
+        }
+      } catch (e) {
+        debugPrint('[AutoUpdater] GitHub manifest.json check error: $e');
+      }
+
+      // 3. Fallback Backend API endpoint check (/api/app-version)
       try {
         final response = await ApiClient().dio.get(
           '/api/app-version',
