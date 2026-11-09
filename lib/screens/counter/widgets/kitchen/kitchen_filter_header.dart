@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../models/restaurant_pos_models.dart';
+import '../../../../widgets/common_filter_pills.dart';
 import 'kitchen_badges.dart';
 
 class KitchenFilterHeader extends StatefulWidget {
@@ -13,6 +14,8 @@ class KitchenFilterHeader extends StatefulWidget {
   final int servedCount;
   final KotStatus? statusFilter;
   final OrderType? typeFilter;
+  final DateRangePreset datePreset;
+  final DateTimeRange? customRange;
   final bool onlyActive;
   final bool onlyDelayed;
   final ValueChanged<KotStatus?> onSelectStatus;
@@ -20,6 +23,8 @@ class KitchenFilterHeader extends StatefulWidget {
   final VoidCallback onSelectDelayed;
   final VoidCallback onSelectAll;
   final ValueChanged<OrderType?> onSelectType;
+  final ValueChanged<DateRangePreset> onSelectDatePreset;
+  final ValueChanged<DateTimeRange?> onSelectCustomRange;
   final ValueChanged<String> onSearch;
   final VoidCallback onRefresh;
   final bool isSoundEnabled;
@@ -38,6 +43,8 @@ class KitchenFilterHeader extends StatefulWidget {
     required this.servedCount,
     required this.statusFilter,
     required this.typeFilter,
+    required this.datePreset,
+    this.customRange,
     required this.onlyActive,
     required this.onlyDelayed,
     required this.onSelectStatus,
@@ -45,6 +52,8 @@ class KitchenFilterHeader extends StatefulWidget {
     required this.onSelectDelayed,
     required this.onSelectAll,
     required this.onSelectType,
+    required this.onSelectDatePreset,
+    required this.onSelectCustomRange,
     required this.onSearch,
     required this.onRefresh,
     this.isSoundEnabled = true,
@@ -362,6 +371,18 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
                         _buildTypePill('Delivery', OrderType.delivery, widget.typeFilter == OrderType.delivery, isDark),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(width: 14),
+                  Container(height: 26, width: 1.2, color: borderColor),
+                  const SizedBox(width: 14),
+
+                  // Date Range Filter Bar (All Time, Today, This Week, This Month, This Year, Custom Range)
+                  CommonDateFilterBar(
+                    selectedPreset: widget.datePreset,
+                    customRange: widget.customRange,
+                    onSelectPreset: widget.onSelectDatePreset,
+                    onSelectCustomRange: widget.onSelectCustomRange,
                   ),
                 ],
               ),

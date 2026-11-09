@@ -1,15 +1,18 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/restaurant_pos_models.dart';
 import '../services/restaurant_pos_service.dart';
 import '../services/inventory_service.dart';
 import '../services/kitchen_audio_service.dart';
+import '../widgets/common_filter_pills.dart';
 
 class KitchenDisplayState {
   final List<KitchenTicket> tickets;
   final KotStatus? statusFilter;
   final OrderType? typeFilter;
+  final DateRangePreset? _datePreset;
+  final DateTimeRange? customRange;
   final String searchQuery;
   final bool? _isLoading;
   bool get isLoading => _isLoading ?? false;
@@ -19,17 +22,51 @@ class KitchenDisplayState {
   final bool isSoundEnabled;
   final KitchenTicket? pendingAlertTicket;
 
+  DateRangePreset get datePreset => _datePreset ?? DateRangePreset.all;
+
   const KitchenDisplayState({
     required this.tickets,
     this.statusFilter,
     this.typeFilter,
+    DateRangePreset? datePreset,
+    this.customRange,
     this.searchQuery = '',
     bool isLoading = false,
     this.onlyActive = false,
     this.onlyDelayed = false,
     this.isSoundEnabled = true,
     this.pendingAlertTicket,
-  }) : _isLoading = isLoading;
+  })  : _datePreset = datePreset ?? DateRangePreset.all,
+        _isLoading = isLoading;
+
+  bool _matchesDateFilter(DateTime ticketDate) {
+    final now = DateTime.now();
+
+    switch (datePreset) {
+      case DateRangePreset.all:
+        return true;
+      case DateRangePreset.today:
+        return ticketDate.year == now.year &&
+            ticketDate.month == now.month &&
+            ticketDate.day == now.day;
+      case DateRangePreset.thisWeek:
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        final startOfWeek = DateTime(monday.year, monday.month, monday.day);
+        final endOfWeek = startOfWeek.add(const Duration(days: 7));
+        return ticketDate.isAfter(startOfWeek.subtract(const Duration(milliseconds: 1))) &&
+            ticketDate.isBefore(endOfWeek);
+      case DateRangePreset.thisMonth:
+        return ticketDate.year == now.year && ticketDate.month == now.month;
+      case DateRangePreset.thisYear:
+        return ticketDate.year == now.year;
+      case DateRangePreset.custom:
+        if (customRange == null) return true;
+        final start = DateTime(customRange!.start.year, customRange!.start.month, customRange!.start.day);
+        final end = DateTime(customRange!.end.year, customRange!.end.month, customRange!.end.day, 23, 59, 59, 999);
+        return ticketDate.isAfter(start.subtract(const Duration(milliseconds: 1))) &&
+            ticketDate.isBefore(end.add(const Duration(milliseconds: 1)));
+    }
+  }
 
   List<KitchenTicket> get filteredTickets {
     return tickets.where((t) {
@@ -42,23 +79,25 @@ class KitchenDisplayState {
           return false;
         }
       }
+      final matchesDate = _matchesDateFilter(t.createdAt);
       final matchesStatus = statusFilter == null || t.status == statusFilter;
       final matchesType = typeFilter == null || t.orderType == typeFilter;
       final matchesSearch = searchQuery.isEmpty ||
           t.kotNumber.toLowerCase().contains(searchQuery.toLowerCase()) ||
           t.orderNumber.toLowerCase().contains(searchQuery.toLowerCase()) ||
           (t.tableLabel != null && t.tableLabel!.toLowerCase().contains(searchQuery.toLowerCase()));
-      return matchesStatus && matchesType && matchesSearch;
+      return matchesDate && matchesStatus && matchesType && matchesSearch;
     }).toList();
   }
 
-  int get totalCount => tickets.length;
-  int get activeCount => tickets.where((t) => t.status != KotStatus.served).length;
-  int get newCount => tickets.where((t) => t.status == KotStatus.newOrder).length;
-  int get preparingCount => tickets.where((t) => t.status == KotStatus.preparing).length;
-  int get readyCount => tickets.where((t) => t.status == KotStatus.ready).length;
-  int get servedCount => tickets.where((t) => t.status == KotStatus.served).length;
+  int get totalCount => tickets.where((t) => _matchesDateFilter(t.createdAt)).length;
+  int get activeCount => tickets.where((t) => _matchesDateFilter(t.createdAt) && t.status != KotStatus.served).length;
+  int get newCount => tickets.where((t) => _matchesDateFilter(t.createdAt) && t.status == KotStatus.newOrder).length;
+  int get preparingCount => tickets.where((t) => _matchesDateFilter(t.createdAt) && t.status == KotStatus.preparing).length;
+  int get readyCount => tickets.where((t) => _matchesDateFilter(t.createdAt) && t.status == KotStatus.ready).length;
+  int get servedCount => tickets.where((t) => _matchesDateFilter(t.createdAt) && t.status == KotStatus.served).length;
   int get delayedCount => tickets.where((t) {
+        if (!_matchesDateFilter(t.createdAt)) return false;
         final mins = DateTime.now().difference(t.createdAt).inMinutes;
         return mins >= 15 && t.status != KotStatus.served;
       }).length;
@@ -67,6 +106,8 @@ class KitchenDisplayState {
     List<KitchenTicket>? tickets,
     KotStatus? Function()? statusFilter,
     OrderType? Function()? typeFilter,
+    DateRangePreset? datePreset,
+    DateTimeRange? Function()? customRange,
     String? searchQuery,
     bool? isLoading,
     bool? onlyActive,
@@ -78,6 +119,8 @@ class KitchenDisplayState {
       tickets: tickets ?? this.tickets,
       statusFilter: statusFilter != null ? statusFilter() : this.statusFilter,
       typeFilter: typeFilter != null ? typeFilter() : this.typeFilter,
+      datePreset: datePreset ?? this.datePreset,
+      customRange: customRange != null ? customRange() : this.customRange,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       onlyActive: onlyActive ?? this.onlyActive,
@@ -322,6 +365,17 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
 
   void setSearchQuery(String q) {
     state = state.copyWith(searchQuery: q);
+  }
+
+  void setDatePreset(DateRangePreset preset) {
+    state = state.copyWith(datePreset: preset, customRange: () => null);
+  }
+
+  void setCustomRange(DateTimeRange? range) {
+    state = state.copyWith(
+      datePreset: DateRangePreset.custom,
+      customRange: () => range,
+    );
   }
 
   /// Update Ticket Status locally and synchronize with backend
