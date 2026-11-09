@@ -27,6 +27,7 @@ class KitchenFilterHeader extends StatefulWidget {
   final ValueChanged<DateTimeRange?> onSelectCustomRange;
   final ValueChanged<String> onSearch;
   final VoidCallback onRefresh;
+  final VoidCallback? onExport;
   final bool isSoundEnabled;
   final VoidCallback? onToggleSound;
   final bool isStandalone;
@@ -56,6 +57,7 @@ class KitchenFilterHeader extends StatefulWidget {
     required this.onSelectCustomRange,
     required this.onSearch,
     required this.onRefresh,
+    this.onExport,
     this.isSoundEnabled = true,
     required this.onToggleSound,
     this.isStandalone = false,
@@ -233,6 +235,44 @@ class _KitchenFilterHeaderState extends State<KitchenFilterHeader> {
                     ),
                   ),
                 ),
+                if (widget.onExport != null) ...[
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'Export kitchen data (Excel / PDF)',
+                    child: Material(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        onTap: widget.onExport,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.file_download_outlined, size: 18, color: Color(0xFF10B981)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Export Data',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 if (widget.isStandalone && widget.onExitStandalone != null) ...[
                   const SizedBox(width: 8),
                   Tooltip(

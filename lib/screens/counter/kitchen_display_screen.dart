@@ -6,6 +6,7 @@ import '../../services/app_session_manager.dart';
 import '../../providers/kitchen_display_provider.dart';
 import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
+import 'widgets/kitchen/kitchen_report_export_helper.dart';
 import 'widgets/kitchen/kot_receipt_preview_modal.dart';
 import 'widgets/kitchen/new_order_alert_modal.dart';
 import '../../models/restaurant_pos_models.dart';
@@ -179,6 +180,14 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                   ),
                 );
               }
+            },
+            onExport: () {
+              KitchenReportExportHelper.showExportOptions(
+                context: context,
+                tickets: tickets,
+                datePreset: kdsState.datePreset,
+                customRange: kdsState.customRange,
+              );
             },
           ),
 
