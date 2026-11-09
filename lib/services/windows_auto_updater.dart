@@ -330,8 +330,11 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         final app = File(Platform.resolvedExecutable);
 
         if (isZip) {
-          final updaterFile = File('${app.parent.path}\\updater.exe');
-          if (await updaterFile.exists()) {
+          final updaterFile = File('${app.parent.path}\\\\updater.exe');
+          final updaterExists = await updaterFile.exists();
+          debugPrint('[AutoUpdater] updater.exe path: ${updaterFile.path}, exists: $updaterExists');
+
+          if (updaterExists) {
             debugPrint('[AutoUpdater] Launching updater.exe with package: $filePath');
             await Process.start(
               updaterFile.path,
@@ -343,18 +346,31 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               ],
               mode: ProcessStartMode.detached,
             );
-            await Future.delayed(const Duration(milliseconds: 300));
+            await Future.delayed(const Duration(milliseconds: 500));
             exit(0);
+          } else {
+            // updater.exe is missing — cannot silently update. Open releases page.
+            debugPrint('[AutoUpdater] updater.exe NOT found at ${updaterFile.path}. Opening releases page.');
+            if (mounted) {
+              setState(() {
+                _isDownloading = false;
+                _statusText = 'Opening browser for manual download...';
+              });
+            }
+            final releaseUri = Uri.parse('https://github.com/sayar2121/SirfBill_Restraunt/releases/latest');
+            if (await canLaunchUrl(releaseUri)) {
+              await launchUrl(releaseUri, mode: LaunchMode.externalApplication);
+            }
+            return;
           }
         }
 
-        // Direct installer execution:
-        // Create a batch script launcher to reliably wait for Flutter to exit, then run Setup
-        final launcherBat = File('${tempDir.path}\\launch_setup.bat');
+        // For .exe installers: create a batch script launcher
+        final launcherBat = File('${tempDir.path}\\\\launch_setup.bat');
         final batContent = '''
 @echo off
-timeout /t 1 /nobreak >nul
-start "" "$filePath" /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS
+timeout /t 2 /nobreak >nul
+start "" "$filePath" /VERYSILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /NORESTART
 exit
 ''';
         await launcherBat.writeAsString(batContent);
@@ -366,15 +382,32 @@ exit
           mode: ProcessStartMode.detached,
         );
 
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(const Duration(milliseconds: 500));
         exit(0);
       } catch (e) {
         debugPrint('[AutoUpdater] Download or execution failed: $e');
         if (mounted) {
           setState(() {
             _isDownloading = false;
-            _statusText = 'Error updating: $e';
+            _statusText = 'Update failed: $e';
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Update failed: $e'),
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: 'Download Manually',
+                textColor: Colors.white,
+                onPressed: () async {
+                  final uri = Uri.parse('https://github.com/sayar2121/SirfBill_Restraunt/releases/latest');
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            ),
+          );
         }
       }
     } else {
