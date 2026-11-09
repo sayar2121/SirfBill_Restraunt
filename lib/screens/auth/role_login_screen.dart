@@ -31,6 +31,16 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
   bool _isLoading = false;
   bool _isCheckingUpdate = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        WindowsAutoUpdater.checkAndShowUpdateIfAvailable(context);
+      }
+    });
+  }
+
   Future<void> _manualCheckUpdate() async {
     setState(() {
       _isCheckingUpdate = true;
