@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.25
+      RELEASE_TAG: v1.0.26
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [AUTO-UPDATE] Fixed updater.exe detection — update now applies silently without looping\n• [AUTO-UPDATE] If updater.exe is missing, app now opens GitHub releases page automatically\n• [UPDATE UI] Clear error message shown if update fails with one-click manual download link\n• [KDS EXPORT] Export kitchen orders to Excel and PDF with date range filters\n• [ORDERS EXPORT] Export order history to Excel and PDF with custom date ranges",
+            "release_notes": "• [AUTO-UPDATE] Auto UAC elevation & permissions check for Program Files\n• [AUTO-UPDATE] Terminate lingering instances & file retry logic for clean seamless updates\n• [UPDATER] Path normalization using native platform separators\n• [ORDERS & KDS] Full live order synchronization & fast report exports",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

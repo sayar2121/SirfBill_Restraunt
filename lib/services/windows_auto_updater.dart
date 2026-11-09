@@ -330,7 +330,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         final app = File(Platform.resolvedExecutable);
 
         if (isZip) {
-          final updaterFile = File('${app.parent.path}\\\\updater.exe');
+          final sep = Platform.pathSeparator;
+          final updaterFile = File('${app.parent.path}${sep}updater.exe');
           final updaterExists = await updaterFile.exists();
           debugPrint('[AutoUpdater] updater.exe path: ${updaterFile.path}, exists: $updaterExists');
 
@@ -366,7 +367,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         }
 
         // For .exe installers: create a batch script launcher
-        final launcherBat = File('${tempDir.path}\\\\launch_setup.bat');
+        final sep = Platform.pathSeparator;
+        final launcherBat = File('${tempDir.path}${sep}launch_setup.bat');
         final batContent = '''
 @echo off
 timeout /t 2 /nobreak >nul

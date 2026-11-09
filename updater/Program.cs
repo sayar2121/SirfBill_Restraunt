@@ -37,6 +37,34 @@ namespace SirfBill.Updater
                 return 1;
             }
 
+            // Check write permission to install directory. If denied, elevate via UAC.
+            if (!HasWritePermission(installDir))
+            {
+                Console.WriteLine("Write permission to installDir denied. Requesting administrator privileges...");
+                try
+                {
+                    string procPath = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? "updater.exe";
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = procPath,
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
+
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        startInfo.ArgumentList.Add(args[i]);
+                    }
+
+                    Process.Start(startInfo);
+                    return 0; // Elevated process takes over
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Elevation request failed: {ex.Message}");
+                }
+            }
+
             // Step 1: Wait for parent process to exit
             if (waitPid > 0)
             {
@@ -52,18 +80,42 @@ namespace SirfBill.Updater
                 }
             }
 
+            // Also terminate any lingering app process so files are not locked
+            if (!string.IsNullOrEmpty(restartExe))
+            {
+                try
+                {
+                    string procName = Path.GetFileNameWithoutExtension(restartExe);
+                    foreach (var p in Process.GetProcessesByName(procName))
+                    {
+                        try
+                        {
+                            if (p.Id != Environment.ProcessId && !p.HasExited)
+                            {
+                                p.Kill();
+                                p.WaitForExit(2000);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            }
+
             Thread.Sleep(1000); // Allow Windows file handles to release
 
             string backupDir = Path.Combine(Path.GetTempPath(), "SirfBill_Backup_" + DateTime.Now.Ticks);
             string stagingDir = Path.Combine(Path.GetTempPath(), "SirfBill_Staging_" + DateTime.Now.Ticks);
             string logPath = Path.Combine(installDir, "updater.log");
+            string tempLogPath = Path.Combine(Path.GetTempPath(), "sirfbill_updater.log");
 
             void Log(string message)
             {
                 try
                 {
                     string entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n";
-                    File.AppendAllText(logPath, entry);
+                    try { File.AppendAllText(logPath, entry); } catch { }
+                    try { File.AppendAllText(tempLogPath, entry); } catch { }
                     Console.WriteLine(message);
                 }
                 catch { }
@@ -135,7 +187,7 @@ namespace SirfBill.Updater
                     Log($"Rollback error: {rollbackEx.Message}");
                 }
 
-                // If update failed and rolled back, still restart the original app so user isn't stranded
+                // If update failed and rolled back, still restart original app so user isn't stranded
                 if (!string.IsNullOrEmpty(restartExe) && File.Exists(restartExe))
                 {
                     try
@@ -154,6 +206,24 @@ namespace SirfBill.Updater
             }
         }
 
+        static bool HasWritePermission(string dir)
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+                return false;
+
+            try
+            {
+                string testFile = Path.Combine(dir, ".perm_test_" + Guid.NewGuid().ToString("N"));
+                File.WriteAllText(testFile, "test");
+                File.Delete(testFile);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         static void CopyDirectory(string sourceDir, string targetDir, bool excludeUpdater = false)
         {
             Directory.CreateDirectory(targetDir);
@@ -169,7 +239,7 @@ namespace SirfBill.Updater
                     continue;
 
                 string destFile = Path.Combine(targetDir, fileName);
-                File.Copy(file, destFile, true);
+                CopyFileWithRetry(file, destFile);
             }
 
             foreach (var directory in Directory.GetDirectories(sourceDir))
@@ -177,6 +247,23 @@ namespace SirfBill.Updater
                 string dirName = Path.GetFileName(directory);
                 CopyDirectory(directory, Path.Combine(targetDir, dirName), excludeUpdater);
             }
+        }
+
+        static void CopyFileWithRetry(string source, string dest, int maxRetries = 5)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    File.Copy(source, dest, true);
+                    return;
+                }
+                catch (IOException) when (i < maxRetries - 1)
+                {
+                    Thread.Sleep(500);
+                }
+            }
+            File.Copy(source, dest, true);
         }
     }
 }
