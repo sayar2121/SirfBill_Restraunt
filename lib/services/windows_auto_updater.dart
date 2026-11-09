@@ -281,27 +281,55 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         final fileExtension = isZip ? 'zip' : 'exe';
         final filePath = '${tempDir.path}\\app-update.$fileExtension';
 
+        // Delete any existing partial download
+        final existingFile = File(filePath);
+        if (await existingFile.exists()) {
+          try {
+            await existingFile.delete();
+          } catch (_) {}
+        }
+
+        debugPrint('[AutoUpdater] Downloading from ${widget.info.downloadUrl} to $filePath');
+
         await Dio().download(
           widget.info.downloadUrl,
           filePath,
+          options: Options(
+            followRedirects: true,
+            maxRedirects: 5,
+          ),
           onReceiveProgress: (received, total) {
-            if (total != -1) {
-              setState(() {
-                _progress = received / total;
-                _statusText = 'Downloading: ${(_progress * 100).toStringAsFixed(0)}%';
-              });
+            if (total > 0) {
+              if (mounted) {
+                setState(() {
+                  _progress = received / total;
+                  _statusText = 'Downloading: ${(_progress * 100).toStringAsFixed(0)}%';
+                });
+              }
+            } else {
+              if (mounted) {
+                setState(() {
+                  _statusText = 'Downloading (${(received / (1024 * 1024)).toStringAsFixed(1)} MB)...';
+                });
+              }
             }
           },
         );
 
-        setState(() {
-          _statusText = 'Starting update...';
-        });
+        if (mounted) {
+          setState(() {
+            _statusText = 'Launching installer...';
+          });
+        }
+
+        final downloadedFile = File(filePath);
+        if (!await downloadedFile.exists() || await downloadedFile.length() < 1000) {
+          throw Exception('Downloaded file is invalid or incomplete (${await downloadedFile.length()} bytes)');
+        }
 
         final app = File(Platform.resolvedExecutable);
 
         if (isZip) {
-          // Launch standalone updater.exe to replace running files with backup & rollback
           final updaterFile = File('${app.parent.path}\\updater.exe');
           if (await updaterFile.exists()) {
             await Process.start(
@@ -318,14 +346,26 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           }
         }
 
-        // Direct installer fallback
-        await Process.start(filePath, [], runInShell: true, mode: ProcessStartMode.detached);
+        // Direct installer execution:
+        // Launch Setup.exe with /SILENT or interactive run so it can update SirfBill Restaurant
+        debugPrint('[AutoUpdater] Launching installer: $filePath');
+        await Process.start(
+          filePath,
+          ['/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
+          mode: ProcessStartMode.detached,
+        );
+
+        // Give the spawned installer process a moment to initialize before exiting
+        await Future.delayed(const Duration(milliseconds: 500));
         exit(0);
       } catch (e) {
-        setState(() {
-          _isDownloading = false;
-          _statusText = 'Error downloading update: $e';
-        });
+        debugPrint('[AutoUpdater] Download or execution failed: $e');
+        if (mounted) {
+          setState(() {
+            _isDownloading = false;
+            _statusText = 'Error updating: $e';
+          });
+        }
       }
     } else {
       // Fallback: open download URL in browser
