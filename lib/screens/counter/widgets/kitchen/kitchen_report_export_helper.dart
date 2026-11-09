@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -263,10 +263,10 @@ class KitchenReportExportHelper {
       final fileBytes = excel.save();
       if (fileBytes != null) {
         final filename = 'Kitchen_Report_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}';
-        await FileSaver.instance.saveFile(
+        await FileSaver.instance.saveAs(
           name: filename,
           bytes: Uint8List.fromList(fileBytes),
-          ext: 'xlsx',
+          fileExtension: 'xlsx',
           mimeType: MimeType.microsoftExcel,
         );
 
@@ -419,3 +419,4 @@ class KitchenReportExportHelper {
     );
   }
 }
+
