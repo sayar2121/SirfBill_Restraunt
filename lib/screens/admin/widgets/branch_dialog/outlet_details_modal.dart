@@ -470,6 +470,8 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                                   return un.contains('inv') || un.contains('stock') || un.contains('inventory');
                                 } else if (moduleKey == 'crm') {
                                   return un.contains('crm') || un.contains('report') || un.contains('loyalty');
+                                } else if (moduleKey == 'waiter') {
+                                  return un.contains('waiter') || un.contains('captain');
                                 }
                                 return false;
                               },
@@ -484,6 +486,9 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                             final activeUser = (matchingStaff.username.isNotEmpty && matchingStaff.id.isNotEmpty)
                                 ? matchingStaff.username
                                 : defaultId;
+                            final activePass = (matchingStaff.password != null && matchingStaff.password!.isNotEmpty)
+                                ? matchingStaff.password!
+                                : (m['pass'] as String);
 
                             return Container(
                               padding: const EdgeInsets.all(14),
@@ -552,10 +557,10 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text('Password: ', style: TextStyle(fontSize: 11, color: subtitleColor)),
-                                                  Text(m['pass'] as String, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor)),
+                                                  Text(activePass, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor)),
                                                   const SizedBox(width: 4),
                                                   InkWell(
-                                                    onTap: () => _copyToClipboard(m['pass'] as String, 'Password'),
+                                                    onTap: () => _copyToClipboard(activePass, 'Password'),
                                                     child: Icon(Icons.copy_rounded, size: 12, color: subtitleColor),
                                                   ),
                                                 ],

@@ -6,6 +6,7 @@ class RestaurantStaffUser {
   final String username;
   final String name;
   final String role; // 'admin', 'manager', 'cashier', 'waiter', 'chef'
+  final String? password;
   final String? phone;
   final String? branchId;
   final String? branchName;
@@ -16,6 +17,7 @@ class RestaurantStaffUser {
     required this.username,
     required this.name,
     required this.role,
+    this.password,
     this.phone,
     this.branchId,
     this.branchName,
@@ -28,6 +30,7 @@ class RestaurantStaffUser {
       username: json['username'] ?? json['email'] ?? '',
       name: json['name'] ?? json['full_name'] ?? 'Staff Member',
       role: (json['role'] ?? 'cashier').toString().toLowerCase(),
+      password: json['password']?.toString(),
       phone: json['phone'] ?? json['contact_number'],
       branchId: json['outlet_id']?.toString() ?? json['branch_id']?.toString() ?? json['shop_id']?.toString(),
       branchName: json['branch_name'] ?? json['shop_name'],
