@@ -40,24 +40,27 @@ class _PosMenuGridState extends State<PosMenuGrid> {
         int crossAxisCount;
         double childAspectRatio;
 
-        if (width < 340) {
+        if (width < 320) {
           crossAxisCount = 1;
           childAspectRatio = 1.35;
-        } else if (width < 540) {
+        } else if (width < 480) {
           crossAxisCount = 2;
-          childAspectRatio = 0.74;
-        } else if (width < 760) {
-          crossAxisCount = 2;
-          childAspectRatio = 0.82;
-        } else if (width < 1000) {
-          crossAxisCount = 3;
-          childAspectRatio = 0.80;
-        } else if (width < 1300) {
-          crossAxisCount = 4;
-          childAspectRatio = 0.84;
-        } else {
-          crossAxisCount = 5;
           childAspectRatio = 0.88;
+        } else if (width < 700) {
+          crossAxisCount = 3;
+          childAspectRatio = 0.90;
+        } else if (width < 960) {
+          crossAxisCount = 4;
+          childAspectRatio = 0.92;
+        } else if (width < 1250) {
+          crossAxisCount = 5;
+          childAspectRatio = 0.92;
+        } else if (width < 1550) {
+          crossAxisCount = 6;
+          childAspectRatio = 0.94;
+        } else {
+          crossAxisCount = 7;
+          childAspectRatio = 0.95;
         }
 
         return Scrollbar(

@@ -247,16 +247,16 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                           int crossAxisCount;
                           double childAspectRatio;
 
-                          if (width < 600) {
+                          if (width < 500) {
                             crossAxisCount = 1;
                             childAspectRatio = 1.05;
-                          } else if (width < 960) {
+                          } else if (width < 850) {
                             crossAxisCount = 2;
                             childAspectRatio = 0.88;
-                          } else if (width < 1400) {
+                          } else if (width < 1250) {
                             crossAxisCount = 3;
                             childAspectRatio = 0.82;
-                          } else if (width < 1850) {
+                          } else if (width < 1650) {
                             crossAxisCount = 4;
                             childAspectRatio = 0.84;
                           } else {

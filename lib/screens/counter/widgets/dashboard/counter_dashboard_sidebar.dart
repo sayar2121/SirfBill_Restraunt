@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../../../providers/zoom_provider.dart';
 import '../../../../services/windows_auto_updater.dart';
 import '../about/about_us_dialog.dart';
 import 'sidebar_nav_item.dart';
@@ -276,6 +278,88 @@ class CounterDashboardSidebar extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+
+              // Screen Zoom Control (Desktop & Web)
+              Consumer(
+                builder: (context, ref, _) {
+                  final zoom = ref.watch(zoomProvider);
+                  final pct = (zoom * 100).round();
+
+                  return AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 200),
+                    crossFadeState: expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                    alignment: Alignment.center,
+                    firstChild: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.zoom_in_rounded, size: 16, color: Color(0xFF3B82F6)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Zoom $pct%',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              constraints: const BoxConstraints(maxWidth: 24, maxHeight: 24),
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.remove_rounded, size: 14),
+                              tooltip: 'Zoom Out (Ctrl -)',
+                              onPressed: () => ref.read(zoomProvider.notifier).zoomOut(),
+                            ),
+                            Tooltip(
+                              message: 'Reset 100% (Ctrl 0)',
+                              child: InkWell(
+                                onTap: () => ref.read(zoomProvider.notifier).resetZoom(),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  child: Text(
+                                    '100%',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: pct == 100 ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              constraints: const BoxConstraints(maxWidth: 24, maxHeight: 24),
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.add_rounded, size: 14),
+                              tooltip: 'Zoom In (Ctrl +)',
+                              onPressed: () => ref.read(zoomProvider.notifier).zoomIn(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    secondChild: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Center(
+                        child: IconButton(
+                          icon: const Icon(Icons.zoom_in_rounded, color: Color(0xFF3B82F6), size: 20),
+                          tooltip: 'Zoom $pct% (Ctrl +/- to adjust)',
+                          onPressed: () => ref.read(zoomProvider.notifier).resetZoom(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
 
               // Check for Updates Button (Windows Desktop only)

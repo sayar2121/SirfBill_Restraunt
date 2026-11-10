@@ -7,6 +7,7 @@ import 'providers/theme_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/auth_service.dart';
 import 'config/api_constants.dart';
+import 'widgets/app_zoom_wrapper.dart';
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
@@ -99,6 +100,8 @@ class _SirfBillAppState extends ConsumerState<SirfBillApp> {
         pageTransitionsTheme: noSwipePageTransitionsTheme,
       ),
       routerConfig: goRouter,
+      builder: (context, child) =>
+          child != null ? AppZoomWrapper(child: child) : const SizedBox.shrink(),
     );
   }
 }

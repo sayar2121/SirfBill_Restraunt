@@ -103,16 +103,16 @@ class OrderManagementScreen extends ConsumerWidget {
                             int crossAxisCount;
                             double childAspectRatio;
 
-                            if (width < 600) {
+                            if (width < 500) {
                               crossAxisCount = 1;
                               childAspectRatio = 1.85;
-                            } else if (width < 960) {
+                            } else if (width < 800) {
                               crossAxisCount = 2;
                               childAspectRatio = 1.35;
-                            } else if (width < 1380) {
+                            } else if (width < 1180) {
                               crossAxisCount = 3;
                               childAspectRatio = 1.25;
-                            } else if (width < 1720) {
+                            } else if (width < 1550) {
                               crossAxisCount = 4;
                               childAspectRatio = 1.30;
                             } else {

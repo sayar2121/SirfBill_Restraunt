@@ -116,16 +116,16 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
                     int crossAxisCount;
                     double childAspectRatio;
 
-                    if (width < 500) {
+                    if (width < 450) {
                       crossAxisCount = 1;
                       childAspectRatio = 1.8;
-                    } else if (width < 850) {
+                    } else if (width < 700) {
                       crossAxisCount = 2;
                       childAspectRatio = 1.35;
-                    } else if (width < 1200) {
+                    } else if (width < 1050) {
                       crossAxisCount = 3;
                       childAspectRatio = 1.38;
-                    } else if (width < 1600) {
+                    } else if (width < 1400) {
                       crossAxisCount = 4;
                       childAspectRatio = 1.40;
                     } else {

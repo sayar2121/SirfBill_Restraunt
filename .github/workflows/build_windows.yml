@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.27
+      RELEASE_TAG: v1.0.28
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [AUTO-UPDATE FIX] Resolved CERTIFICATE_VERIFY_FAILED SSL handshake error on Windows\n• [DOWNLOAD FALLBACK] Added system curl.exe fallback to guarantee download even if SSL chain is missing\n• [AUTO-UPDATE] Auto UAC elevation & permissions check for Program Files\n• [ORDERS & KDS] Full live order synchronization & fast report exports",
+            "release_notes": "• [DESKTOP ZOOM] Full in-exe Zoom In & Out feature via Ctrl + / Ctrl - / Ctrl + MouseWheel\n• [ZOOM CONTROLS] Interactive Zoom HUD pill and sidebar Zoom controls with persistent saving\n• [POS MENU GRID] Fixed oversized food cards with compact responsive columns & aspect ratios\n• [ORDERS & TABLES] Optimized grid breakpoints across Orders, Tables, and Kitchen screens",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
