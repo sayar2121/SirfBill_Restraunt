@@ -177,6 +177,7 @@ enum OrderStatus {
   completed,
   cancelled,
   hold,
+  ready,
   served,
 }
 

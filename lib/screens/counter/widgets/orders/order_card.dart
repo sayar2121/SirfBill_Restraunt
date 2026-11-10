@@ -40,6 +40,10 @@ class OrderCard extends StatelessWidget {
         statusColor = const Color(0xFF6366F1);
         statusText = 'Served';
         break;
+      case OrderStatus.ready:
+        statusColor = const Color(0xFF10B981);
+        statusText = 'Ready to Serve';
+        break;
       case OrderStatus.hold:
         statusColor = const Color(0xFFF59E0B);
         statusText = 'On Hold';

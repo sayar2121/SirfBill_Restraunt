@@ -133,11 +133,11 @@ class KitchenDisplayState {
 
 class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   // Store client-side prepared item checkboxes keyed by "ticketId_itemId"
-  final Map<String, bool> _preparedItemMap = {};
+  static final Map<String, bool> _preparedItemMap = {};
   // Store client-side kitchen ticket status override keyed by "orderId"
-  final Map<String, KotStatus> _ticketStatusMap = {};
+  static final Map<String, KotStatus> _ticketStatusMap = {};
   // Store time when preparation was started / order accepted
-  final Map<String, DateTime> _prepStartTimeMap = {};
+  static final Map<String, DateTime> _prepStartTimeMap = {};
   // Track known ticket IDs to detect new incoming tickets and ring alert
   final Set<String> _knownTicketIds = {};
   bool _hasInitialLoaded = false;
@@ -204,6 +204,9 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           final isRecentOrder = ageHours < 12;
 
           switch (order.status) {
+            case OrderStatus.ready:
+              kotStatus = KotStatus.ready;
+              break;
             case OrderStatus.active:
               kotStatus = KotStatus.newOrder;
               break;
@@ -428,7 +431,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           backendStatus = 'SENT_TO_KITCHEN';
           break;
         case KotStatus.ready:
-          backendStatus = 'HOLD';
+          backendStatus = 'READY';
           break;
         case KotStatus.served:
           // In food service lifecycle, when kitchen marks "Served", transition backend status to SERVED

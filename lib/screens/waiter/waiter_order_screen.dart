@@ -8,6 +8,7 @@ import '../../providers/kitchen_display_provider.dart';
 import '../../providers/restaurant_order_provider.dart';
 import '../../providers/restaurant_table_provider.dart';
 import '../../services/inventory_service.dart';
+import '../../services/kitchen_audio_service.dart';
 import '../../services/restaurant_pos_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/shop_settings_service.dart';
@@ -51,6 +52,7 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   List<PosMenuItem> _catalog = [];
   List<MenuCategory> _categories = [];
   Timer? _refreshTimer;
+  final Set<String> _notifiedReadyTicketIds = {};
 
   // Cart managed locally or synced with POS provider for this table
   final List<PosCartItem> _cart = [];
@@ -774,6 +776,58 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final kdsState = ref.watch(kitchenDisplayProvider);
     final readyTickets = kdsState.tickets.where((t) => t.status == KotStatus.ready).toList();
     final readyTableLabels = readyTickets.map((t) => t.tableLabel?.trim()).whereType<String>().toSet();
+
+    // Trigger audible chime and toast notification when an order is marked ready by the kitchen
+    final newlyReadyTickets = readyTickets.where((t) => !_notifiedReadyTicketIds.contains(t.id)).toList();
+    if (newlyReadyTickets.isNotEmpty) {
+      for (final t in newlyReadyTickets) {
+        _notifiedReadyTicketIds.add(t.id);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        KitchenAudioService.playNewOrderAlert();
+        final firstTicket = newlyReadyTickets.first;
+        final targetTable = firstTicket.tableLabel != null && firstTicket.tableLabel!.isNotEmpty
+            ? 'Table ${firstTicket.tableLabel}'
+            : 'Order ${firstTicket.orderNumber}';
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '🔔 $targetTable is READY!',
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                      ),
+                      const Text(
+                        'Food is cooked and ready for pickup from kitchen',
+                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'SERVE NOW',
+              textColor: Colors.white,
+              onPressed: () => _showReadyOrdersDialog(context, readyTickets),
+            ),
+          ),
+        );
+      });
+    }
 
     final filteredItems = _catalog.where((item) {
       final matchesCategory =

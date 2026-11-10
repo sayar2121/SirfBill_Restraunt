@@ -254,7 +254,9 @@ class RestaurantOrderService {
 
           final rawStatus = (json['status'] ?? json['order_status'] ?? 'OPEN').toString().toUpperCase();
           OrderStatus orderStatus = OrderStatus.active;
-          if (rawStatus == 'SERVED') {
+          if (rawStatus == 'READY' || rawStatus.contains('READY') || rawStatus == 'FOOD_READY' || rawStatus == 'PREPARED') {
+            orderStatus = OrderStatus.ready;
+          } else if (rawStatus == 'SERVED') {
             orderStatus = OrderStatus.served;
           } else if (rawStatus.contains('SETTLED') || rawStatus.contains('COMPLETE') || rawStatus.contains('PAID')) {
             orderStatus = OrderStatus.completed;

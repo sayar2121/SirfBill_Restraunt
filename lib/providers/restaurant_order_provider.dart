@@ -194,6 +194,9 @@ class RestaurantOrderNotifier extends Notifier<RestaurantOrderState> {
         case OrderStatus.served:
           targetBackendStatus = 'SERVED';
           break;
+        case OrderStatus.ready:
+          targetBackendStatus = 'READY';
+          break;
         case OrderStatus.hold:
           targetBackendStatus = 'HOLD';
           break;
