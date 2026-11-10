@@ -78,9 +78,9 @@ class WaiterMenuCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Food Image Header with 16:9 ratio
+              // 1. Food Image Header with 16:10 ratio
               AspectRatio(
-                aspectRatio: 16 / 9,
+                aspectRatio: 16 / 10,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -196,32 +196,26 @@ class WaiterMenuCard extends StatelessWidget {
                 ),
               ),
 
-              // 2. Info & Action Section (Compact, balanced, overflow-safe)
+              // 2. Info & Action Section (Compact, balanced, perfectly proportioned)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(9, 5, 9, 7),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Dish Name (Controlled height & scale-safe)
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            item.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              height: 1.15,
-                            ),
-                          ),
+                      // Dish Name
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          height: 1.18,
                         ),
                       ),
-                      const SizedBox(height: 2),
 
                       // Price & Stepper Row
                       Row(

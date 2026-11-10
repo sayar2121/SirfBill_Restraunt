@@ -57,25 +57,22 @@ class WaiterMenuGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        int crossAxisCount;
-        double childAspectRatio;
-
-        if (width >= 1200) {
+        final int crossAxisCount;
+        if (width >= 1150) {
           crossAxisCount = 5;
-          childAspectRatio = 0.78;
-        } else if (width >= 850) {
+        } else if (width >= 880) {
           crossAxisCount = 4;
-          childAspectRatio = 0.76;
-        } else if (width >= 620) {
+        } else if (width >= 580) {
           crossAxisCount = 3;
-          childAspectRatio = 0.74;
-        } else if (width >= 360) {
+        } else if (width >= 340) {
           crossAxisCount = 2;
-          childAspectRatio = 0.76;
         } else {
           crossAxisCount = 1;
-          childAspectRatio = 1.4;
         }
+
+        final cardWidth = (width - (crossAxisCount - 1) * 10 - 28) / crossAxisCount;
+        final cardHeight = (cardWidth * 10 / 16) + 78;
+        final childAspectRatio = (cardWidth / cardHeight).clamp(0.82, 1.15);
 
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),

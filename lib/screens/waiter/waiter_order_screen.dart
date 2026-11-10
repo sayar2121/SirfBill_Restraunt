@@ -952,8 +952,8 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
                     }
 
                     final cardWidth = (menuWidth - (cols - 1) * 10 - 28) / cols;
-                    final cardHeight = (cardWidth * 9 / 16) + 84;
-                    final ratio = (cardWidth / cardHeight).clamp(0.58, 0.72);
+                    final cardHeight = (cardWidth * 10 / 16) + 78;
+                    final ratio = (cardWidth / cardHeight).clamp(0.82, 1.15);
 
                     return GridView.builder(
                       padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
