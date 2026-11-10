@@ -236,13 +236,16 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         // Map line items to KotItem
         final List<KotItem> kotItems = order.items.map((it) {
           final itemKey = '${order.id}_${it.item.id}';
-          final isPrepared = _preparedItemMap[itemKey] ?? (kotStatus == KotStatus.served);
+          final isExplicitlyPrepared = _preparedItemMap[itemKey];
+          final isPrepared = isExplicitlyPrepared ?? (kotStatus == KotStatus.served);
+          final isRunningItem = _runningItemKeys.contains(itemKey);
           return KotItem(
             id: it.item.id,
             name: it.item.name,
             quantity: it.quantity,
             notes: it.notes,
             isPrepared: isPrepared,
+            isRunningItem: isRunningItem,
           );
         }).toList();
 
@@ -482,15 +485,33 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
     state = state.copyWith(tickets: updated);
   }
 
+  final Set<String> _runningItemKeys = {};
+
+  /// Keep already-prepared items marked as DONE when new running items are added to a table order!
+  /// Only the newly added items remain unchecked (NEW ADDED) so cooks know exactly what to prepare.
+  void markRunningItemsForOrder({
+    required String orderId,
+    required List<String> existingPreparedItemIds,
+    required List<String> newlyAddedItemIds,
+  }) {
+    _ticketStatusMap[orderId] = KotStatus.newOrder;
+    _prepStartTimeMap.remove(orderId);
+
+    // Keep existing items marked as prepared/done
+    for (final id in existingPreparedItemIds) {
+      _preparedItemMap['${orderId}_$id'] = true;
+    }
+    // Mark newly added items as NOT prepared and flag them as running items
+    for (final id in newlyAddedItemIds) {
+      _preparedItemMap['${orderId}_$id'] = false;
+      _runningItemKeys.add('${orderId}_$id');
+    }
+  }
+
   /// Reset ticket status back to newOrder when running items are added to an existing/served order
   void resetTicketForNewItems(String orderId) {
     _ticketStatusMap.remove(orderId);
     _prepStartTimeMap.remove(orderId);
-    // Unmark any prepared status for items belonging to this ticket
-    final keysToRemove = _preparedItemMap.keys.where((k) => k.startsWith('${orderId}_')).toList();
-    for (final k in keysToRemove) {
-      _preparedItemMap.remove(k);
-    }
   }
 }
 

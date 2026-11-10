@@ -64,18 +64,61 @@ class KitchenTicketItemRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.name,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: item.isPrepared
-                          ? (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8))
-                          : textColor,
-                      decoration: item.isPrepared ? TextDecoration.lineThrough : null,
-                      decorationColor: const Color(0xFF94A3B8),
-                      decorationThickness: 1.5,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          item.name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: item.isPrepared
+                                ? (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8))
+                                : textColor,
+                            decoration: item.isPrepared ? TextDecoration.lineThrough : null,
+                            decorationColor: const Color(0xFF94A3B8),
+                            decorationThickness: 1.5,
+                          ),
+                        ),
+                      ),
+                      if (item.isPrepared) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                          ),
+                          child: const Text(
+                            'SERVED / DONE',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ),
+                      ] else if (item.isRunningItem) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                          ),
+                          child: const Text(
+                            'NEW ADDED',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFF59E0B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (item.notes != null && item.notes!.isNotEmpty)
                     Padding(

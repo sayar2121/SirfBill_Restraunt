@@ -275,6 +275,7 @@ class KotItem {
   final int quantity;
   final String? notes; // e.g. "Less Spicy", "No Onion"
   final bool isPrepared;
+  final bool isRunningItem; // Highlight items added later to a running table order
 
   const KotItem({
     required this.id,
@@ -282,6 +283,7 @@ class KotItem {
     required this.quantity,
     this.notes,
     this.isPrepared = false,
+    this.isRunningItem = false,
   });
 
   KotItem copyWith({
@@ -290,6 +292,7 @@ class KotItem {
     int? quantity,
     String? notes,
     bool? isPrepared,
+    bool? isRunningItem,
   }) {
     return KotItem(
       id: id ?? this.id,
@@ -297,6 +300,7 @@ class KotItem {
       quantity: quantity ?? this.quantity,
       notes: notes ?? this.notes,
       isPrepared: isPrepared ?? this.isPrepared,
+      isRunningItem: isRunningItem ?? this.isRunningItem,
     );
   }
 }

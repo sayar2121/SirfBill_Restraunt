@@ -133,8 +133,12 @@ class PosOrderActionController {
       if (updateRes != null) {
         final orderNum = posState.activeOrderNumber ?? 'Order';
         final tableId = posState.selectedTableId;
-        // Reset KDS ticket status so newly added running items appear active in the kitchen
-        ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(posState.activeOrderId!);
+        // Mark existing items as DONE / SERVED and only new delta items as uncompleted
+        ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
+          orderId: posState.activeOrderId!,
+          existingPreparedItemIds: initialItems.map((e) => e.item.id).toList(),
+          newlyAddedItemIds: deltaItems.map((d) => d.item.id).toList(),
+        );
         ref.read(restaurantOrderProvider.notifier).loadOrders();
         ref.read(restaurantTableProvider.notifier).loadTables();
         ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
@@ -282,7 +286,11 @@ class PosOrderActionController {
       final orderNum = posState.activeOrderNumber ?? 'ORD';
       final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
 
-      ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(posState.activeOrderId!);
+      ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
+        orderId: posState.activeOrderId!,
+        existingPreparedItemIds: initialItems.map((e) => e.item.id).toList(),
+        newlyAddedItemIds: itemsToSend.map((d) => d.item.id).toList(),
+      );
       ref.read(restaurantOrderProvider.notifier).loadOrders();
       ref.read(restaurantTableProvider.notifier).loadTables();
       ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
