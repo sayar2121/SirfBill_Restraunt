@@ -254,6 +254,17 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
       }
     } else if (matchingLiveOrder != null && matchingLiveOrder.items.isNotEmpty) {
       // Fallback loaded from live orders provider (e.g. order marked served or held)
+      // Attempt to fetch fresh server order so we have the accurate version counter
+      int resolvedVersion = 1;
+      try {
+        final freshOrder = await RestaurantPosService.fetchOrderById(matchingLiveOrder.id);
+        if (freshOrder != null && freshOrder['version'] != null) {
+          resolvedVersion = (freshOrder['version'] is num)
+              ? (freshOrder['version'] as num).toInt()
+              : (int.tryParse(freshOrder['version'].toString()) ?? 1);
+        }
+      } catch (_) {}
+
       posNotifier.setCart(
         matchingLiveOrder.items,
         customerName: matchingLiveOrder.customerName,
@@ -261,7 +272,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
         notes: matchingLiveOrder.notes,
         orderId: matchingLiveOrder.id,
         orderNumber: matchingLiveOrder.orderNumber,
-        orderVersion: 1,
+        orderVersion: resolvedVersion,
       );
 
       if (mounted && showFeedback) {

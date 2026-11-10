@@ -83,6 +83,19 @@ class RestaurantOrderService {
     return null;
   }
 
+  /// Fetch single order details by ID
+  static Future<Map<String, dynamic>?> fetchOrderById(String orderId) async {
+    try {
+      final res = await _dio.get('/api/restaurant/orders/$orderId');
+      if (res.statusCode == 200 && res.data != null && res.data is Map) {
+        return Map<String, dynamic>.from(res.data);
+      }
+    } catch (e) {
+      debugPrint('Info: fetchOrderById error for $orderId: $e');
+    }
+    return null;
+  }
+
   /// 4b. Append / Update Items on an Existing Held Table Order
   static Future<Map<String, dynamic>?> appendItemsToOrder({
     required String orderId,
@@ -90,29 +103,57 @@ class RestaurantOrderService {
     int? expectedVersion = 1,
   }) async {
     try {
-      final payload = {
-        'expected_version': expectedVersion ?? 1,
-        'lines': newItems.map((cartItem) {
-          return {
-            'item_id': cartItem.item.id,
-            'quantity': cartItem.quantity,
-            'variant_name': 'Standard',
-            if (cartItem.notes != null && cartItem.notes!.isNotEmpty)
-              'special_instructions': cartItem.notes,
-            'modifiers': [],
-          };
-        }).toList(),
-      };
+      final linesData = newItems.map((cartItem) {
+        return {
+          'item_id': cartItem.item.id,
+          'quantity': cartItem.quantity,
+          'variant_name': 'Standard',
+          if (cartItem.notes != null && cartItem.notes!.isNotEmpty)
+            'special_instructions': cartItem.notes,
+          'modifiers': [],
+        };
+      }).toList();
 
-      debugPrint('PATCH /api/restaurant/orders/$orderId/items payload: $payload');
-      Response res;
+      int currentVer = expectedVersion ?? 1;
+
+      // Helper function to send the PATCH request
+      Future<Response> sendPatch(int ver, {bool includeExpectedVersion = true}) {
+        final payload = {
+          if (includeExpectedVersion) 'expected_version': ver,
+          'lines': linesData,
+        };
+        debugPrint('PATCH /api/restaurant/orders/$orderId/items payload: $payload');
+        return _dio.patch('/api/restaurant/orders/$orderId/items', data: payload);
+      }
+
+      Response? res;
       try {
-        res = await _dio.patch('/api/restaurant/orders/$orderId/items', data: payload);
-      } catch (patchErr) {
-        // If PATCH failed (e.g. 409 conflict, version mismatch, or not allowed when SERVED),
-        // try POST /api/restaurant/orders/$orderId/items as fallback
-        debugPrint('PATCH items error ($patchErr), attempting fallback POST /api/restaurant/orders/$orderId/items...');
-        res = await _dio.post('/api/restaurant/orders/$orderId/items', data: payload);
+        res = await sendPatch(currentVer, includeExpectedVersion: true);
+      } catch (firstErr) {
+        if (firstErr is DioException && firstErr.response?.statusCode == 409) {
+          debugPrint('409 Conflict detected for order $orderId. Fetching latest version from server...');
+          final latestOrder = await fetchOrderById(orderId);
+          if (latestOrder != null && latestOrder['version'] != null) {
+            final serverVer = (latestOrder['version'] is num)
+                ? (latestOrder['version'] as num).toInt()
+                : (int.tryParse(latestOrder['version'].toString()) ?? currentVer + 1);
+            debugPrint('Retrying with fetched server version: $serverVer');
+            try {
+              res = await sendPatch(serverVer, includeExpectedVersion: true);
+            } catch (_) {}
+          }
+
+          if (res == null) {
+            debugPrint('Retrying without expected_version key in payload...');
+            try {
+              res = await sendPatch(currentVer, includeExpectedVersion: false);
+            } catch (_) {}
+          }
+        }
+
+        if (res == null) {
+          rethrow;
+        }
       }
 
       if (res.statusCode == 200 || res.statusCode == 201) {
@@ -121,7 +162,8 @@ class RestaurantOrderService {
         } catch (_) {}
         // Also ensure order status transitions back to OPEN/SENT_TO_KITCHEN so kitchen displays the running ticket
         try {
-          await _dio.post('/api/restaurant/orders/$orderId/transitions',
+          await _dio.post(
+            '/api/restaurant/orders/$orderId/transitions',
             queryParameters: {'payload': 'SENT_TO_KITCHEN'},
             data: {'target_status': 'SENT_TO_KITCHEN', 'status': 'SENT_TO_KITCHEN'},
           );

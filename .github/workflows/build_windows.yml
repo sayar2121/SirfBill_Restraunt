@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.34
+      RELEASE_TAG: v1.0.35
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [TABLE WORKFLOW FIX] Running items / add item to served table order now seamlessly updates and dispatches new items to kitchen\n• [KDS RUNNING ORDER] Added resetTicketForNewItems — table remains occupied and kitchen display rings for new running items\n• [KOT / HOLD DISPATCH] Both Hold and KOT buttons now support appending items to existing active table orders",
+            "release_notes": "• [409 CONFLICT FIX] Fixed optimistic lock conflict when appending items to active table order\n• [DYNAMIC VERSION SYNC] Auto-fetches latest server order version on 409 conflict and retries seamlessly\n• [RUNNING KOT] Adding items to served/held orders now completes reliably without 409 or 405 errors",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

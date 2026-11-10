@@ -155,6 +155,9 @@ class RestaurantPosService {
         paymentMethod: paymentMethod,
       );
 
+  static Future<Map<String, dynamic>?> fetchOrderById(String orderId) =>
+      RestaurantOrderService.fetchOrderById(orderId);
+
   static Future<Map<String, dynamic>?> appendItemsToOrder({
     required String orderId,
     required List<PosCartItem> newItems,
