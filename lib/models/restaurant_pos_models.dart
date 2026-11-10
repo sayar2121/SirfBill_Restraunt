@@ -33,6 +33,10 @@ class DiningTable {
     this.activeOrderCount = 0,
   });
 
+  bool get isOccupied => status == TableStatus.occupied;
+  bool get isAvailable => status == TableStatus.available;
+  bool get isReserved => status == TableStatus.reserved;
+
   DiningTable copyWith({
     String? id,
     String? label,

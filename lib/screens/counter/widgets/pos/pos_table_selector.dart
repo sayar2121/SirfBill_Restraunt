@@ -56,102 +56,105 @@ class PosTableSelector extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header: "Table Selection", Floor dropdown, "View Floor Plan"
-          Row(
-            children: [
-              const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.table_restaurant_rounded, size: 18, color: Color(0xFF10B981)),
-                  SizedBox(width: 6),
-                  Text(
-                    'Tables',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasRealFloors) ...[
-                    Container(
-                      height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                        border: Border.all(color: borderColor, width: 1.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: effectiveFloor,
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : const Color(0xFF1E293B),
-                          ),
-                          items: floorList.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                          onChanged: (val) {
-                            if (val != null) onSelectFloor(val);
-                          },
-                        ),
-                      ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.table_restaurant_rounded, size: 18, color: Color(0xFF10B981)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Tables',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
                     ),
-                    const SizedBox(width: 6),
                   ],
-                  if (onRefresh != null) ...[
-                    Tooltip(
-                      message: 'Refresh Tables',
-                      child: InkWell(
-                        onTap: onRefresh,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: borderColor, width: 1.2),
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF10B981)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Tooltip(
-                    message: 'View Floor Plan',
-                    child: InkWell(
-                      onTap: () => context.go('/counter/tables'),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
+                ),
+                const SizedBox(width: 16),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasRealFloors) ...[
+                      Container(
                         height: 32,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          border: Border.all(color: borderColor, width: 1.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.grid_view_rounded, size: 15, color: Color(0xFF3B82F6)),
-                            SizedBox(width: 4),
-                            Text(
-                              'Floor',
-                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: effectiveFloor,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : const Color(0xFF1E293B),
                             ),
-                          ],
+                            items: floorList.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                            onChanged: (val) {
+                              if (val != null) onSelectFloor(val);
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    if (onRefresh != null) ...[
+                      Tooltip(
+                        message: 'Refresh Tables',
+                        child: InkWell(
+                          onTap: onRefresh,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: borderColor, width: 1.2),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF10B981)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Tooltip(
+                      message: 'View Floor Plan',
+                      child: InkWell(
+                        onTap: () => context.go('/counter/tables'),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 32,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.grid_view_rounded, size: 15, color: Color(0xFF3B82F6)),
+                              SizedBox(width: 4),
+                              Text(
+                                'Floor',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
 

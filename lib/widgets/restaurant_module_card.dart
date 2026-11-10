@@ -50,15 +50,15 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
-        final isCompact = cardWidth < 220;
+        final isCompact = cardWidth < 240;
 
-        final double horizontalPadding = isCompact ? 16.0 : 22.0;
-        final double topPadding = isCompact ? 16.0 : 22.0;
-        final double bottomPadding = isCompact ? 16.0 : 22.0;
-        final double iconBoxSize = isCompact ? 44.0 : 52.0;
-        final double iconSize = isCompact ? 24.0 : 28.0;
-        final double titleFontSize = isCompact ? 17.0 : 19.0;
-        final double descFontSize = isCompact ? 12.0 : 13.0;
+        final double horizontalPadding = isCompact ? 14.0 : 20.0;
+        final double topPadding = isCompact ? 14.0 : 20.0;
+        final double bottomPadding = isCompact ? 14.0 : 20.0;
+        final double iconBoxSize = isCompact ? 40.0 : 48.0;
+        final double iconSize = isCompact ? 22.0 : 26.0;
+        final double titleFontSize = isCompact ? 15.5 : 18.0;
+        final double descFontSize = isCompact ? 11.5 : 12.5;
 
         return MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -96,12 +96,12 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                   children: [
                     // Top-right watermark number (01, 02, etc.)
                     Positioned(
-                      top: 18,
-                      right: 20,
+                      top: isCompact ? 14 : 18,
+                      right: isCompact ? 14 : 20,
                       child: Text(
                         widget.data.indexText,
                         style: TextStyle(
-                          fontSize: isCompact ? 13 : 15,
+                          fontSize: isCompact ? 12.5 : 15,
                           fontWeight: FontWeight.w700,
                           color: primaryColor.withValues(alpha: 0.75),
                           letterSpacing: 0.5,
@@ -126,7 +126,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                             height: iconBoxSize,
                             decoration: BoxDecoration(
                               color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.12),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Center(
                               child: Icon(
@@ -136,32 +136,42 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          SizedBox(height: isCompact ? 14 : 18),
 
-                          // Title
-                          Text(
-                            widget.data.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: titleFontSize,
-                              fontWeight: FontWeight.w800,
-                              color: titleColor,
-                              letterSpacing: -0.3,
+                          // Title (2-line container for unified alignment across cards)
+                          SizedBox(
+                            height: isCompact ? 40 : 46,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                widget.data.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: titleFontSize,
+                                  fontWeight: FontWeight.w800,
+                                  color: titleColor,
+                                  height: 1.2,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
 
                           // Description
-                          Text(
-                            widget.data.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: descFontSize,
-                              height: 1.4,
-                              fontWeight: FontWeight.w500,
-                              color: descColor,
+                          SizedBox(
+                            height: isCompact ? 34 : 40,
+                            child: Text(
+                              widget.data.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: descFontSize,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                                color: descColor,
+                              ),
                             ),
                           ),
 
@@ -173,8 +183,8 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 16 : 22,
-                                vertical: isCompact ? 8 : 10,
+                                horizontal: isCompact ? 14 : 20,
+                                vertical: isCompact ? 7 : 9,
                               ),
                               decoration: BoxDecoration(
                                 color: primaryColor,
@@ -195,15 +205,15 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: isCompact ? 12 : 13,
+                                      fontSize: isCompact ? 11.5 : 13,
                                       letterSpacing: 0.2,
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 4),
                                   Icon(
                                     Icons.arrow_forward_rounded,
                                     color: Colors.white,
-                                    size: isCompact ? 13 : 15,
+                                    size: isCompact ? 12 : 14,
                                   ),
                                 ],
                               ),

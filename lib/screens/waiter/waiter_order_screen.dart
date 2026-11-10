@@ -1,18 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/restaurant_pos_models.dart';
 import '../../providers/kitchen_display_provider.dart';
 import '../../providers/restaurant_order_provider.dart';
 import '../../providers/restaurant_table_provider.dart';
-import '../../services/auth_service.dart';
+import '../../services/inventory_service.dart';
 import '../../services/restaurant_pos_service.dart';
 import '../../utils/kot_printer_helper.dart';
-import '../counter/widgets/pos/pos_menu_card.dart';
-import '../counter/widgets/pos/pos_table_selector.dart';
+import 'widgets/waiter_app_bar.dart';
+import 'widgets/waiter_table_strip.dart';
+import 'widgets/waiter_category_strip.dart';
+import 'widgets/waiter_menu_card.dart';
+import 'widgets/waiter_cart_panel.dart';
 
 /// Touch-optimized Waiter Order Taking Screen
 /// Designed specifically for Waitstaff / Captains to select tables,
@@ -33,6 +35,16 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
+  // Real-time tracking of active orders on seated tables
+  String? _activeOrderId;
+  String? _activeOrderNumber;
+  int? _activeOrderVersion;
+  List<PosCartItem> _initialCart = [];
+
+  // Responsive controls: Mobile tab index & Desktop draggable cart width
+  int _mobileTabIndex = 0;
+  double _cartWidth = 360.0;
+
   List<PosMenuItem> _catalog = [];
   List<MenuCategory> _categories = [];
   Timer? _refreshTimer;
@@ -47,10 +59,11 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     _loadWaiterInfo();
     _loadMenuAndTables();
 
-    // Auto-refresh tables state every 10 seconds so occupied tables stay up to date
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Auto-refresh tables and orders state every 5 seconds for real-time live sync
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
+        ref.read(restaurantOrderProvider.notifier).loadOrders();
       }
     });
   }
@@ -75,8 +88,25 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   Future<void> _loadMenuAndTables() async {
     setState(() => _isLoading = true);
     try {
-      final items = await RestaurantPosService.fetchMenuItems();
-      final categories = await RestaurantPosService.fetchCategories();
+      final prefs = await SharedPreferences.getInstance();
+      String? savedShopId = prefs.getString('selected_shop_id');
+      final assignedOutletId = prefs.getString('assigned_outlet_id');
+      final targetShopId = (assignedOutletId != null && assignedOutletId.isNotEmpty)
+          ? assignedOutletId
+          : (savedShopId != null && savedShopId.isNotEmpty
+              ? savedShopId
+              : await InventoryService.getShopId());
+
+      if (targetShopId.isNotEmpty) {
+        await InventoryService.setShopId(targetShopId);
+        await prefs.setString('selected_shop_id', targetShopId);
+      }
+
+      // Fetch real-time menu items and categories for the active outlet
+      final items = await RestaurantPosService.fetchMenuItems(outletId: targetShopId);
+      final categories = await RestaurantPosService.fetchCategories(outletId: targetShopId);
+
+      // Refresh live dining tables and live order tickets
       await ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
       await ref.read(restaurantOrderProvider.notifier).loadOrders();
 
@@ -95,34 +125,98 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   void _selectTable(DiningTable table) async {
     setState(() {
       _selectedTableId = table.id;
+      _activeOrderId = null;
+      _activeOrderNumber = null;
+      _activeOrderVersion = 1;
+      _initialCart = [];
       _cart.clear();
       _notesController.clear();
     });
 
-    // If table is already occupied, load its existing active order so waiter can add running items
-    if (table.status == TableStatus.occupied) {
-      final active = await RestaurantPosService.fetchActiveOrderByTable(table.id);
-      if (active != null && active['lines'] is List) {
-        final List lines = active['lines'];
-        for (final l in lines) {
-          final itemId = l['item_id']?.toString() ?? '';
-          final itemName = l['item_name']?.toString() ?? 'Item';
-          final qty = (l['quantity'] is num) ? (l['quantity'] as num).toInt() : 1;
-          final unitPrice = double.tryParse(l['unit_price']?.toString() ?? '0') ?? 0.0;
-          final matched = _catalog.where((c) => c.id == itemId).firstOrNull ??
-              PosMenuItem(
-                id: itemId,
-                name: itemName,
-                price: unitPrice,
-                categoryId: 'all',
-              );
-          _cart.add(PosCartItem(
-            item: matched,
-            quantity: qty,
-            notes: l['special_instructions']?.toString(),
-          ));
-        }
-        if (mounted) setState(() {});
+    // 1. Fetch live order from dedicated table endpoint
+    Map<String, dynamic>? active = await RestaurantPosService.fetchActiveOrderByTable(table.id);
+
+    // If order is completed, cancelled or paid, treat table as empty
+    if (active != null) {
+      final statusStr = (active['status'] ?? active['order_status'] ?? '').toString().toUpperCase();
+      final paymentStatusStr = (active['payment_status'] ?? '').toString().toUpperCase();
+      if (statusStr.contains('CANCEL') ||
+          statusStr.contains('SETTLE') ||
+          statusStr.contains('COMPLET') ||
+          paymentStatusStr.contains('PAID')) {
+        active = null;
+      }
+    }
+
+    // 2. Fallback: match from live orders in restaurantOrderProvider
+    if (active == null || active['lines'] == null || (active['lines'] as List).isEmpty) {
+      final orders = ref.read(restaurantOrderProvider).orders;
+      final targetLabelLower = table.label.trim().toLowerCase();
+      final matchingOrder = orders.where((ord) {
+        final matchesId = ord.tableId == table.id || ord.tableLabel == table.id;
+        final matchesLabel = ord.tableLabel != null &&
+            ord.tableLabel!.trim().toLowerCase() == targetLabelLower;
+        return (matchesId || matchesLabel) &&
+            ord.paymentStatus != PaymentStatus.paid &&
+            ord.status != OrderStatus.cancelled &&
+            ord.status != OrderStatus.completed;
+      }).firstOrNull;
+
+      if (matchingOrder != null) {
+        active = await RestaurantPosService.fetchOrderById(matchingOrder.id);
+      }
+    }
+
+    // If an active order exists on this table, load its real live dishes!
+    if (active != null && active['lines'] is List && (active['lines'] as List).isNotEmpty) {
+      final List lines = active['lines'];
+      final List<PosCartItem> loadedItems = [];
+
+      for (final l in lines) {
+        final itemId = l['item_id']?.toString() ?? '';
+        final itemName = l['item_name']?.toString() ?? 'Item';
+        final qty = (l['quantity'] is num) ? (l['quantity'] as num).toInt() : 1;
+        final unitPrice = double.tryParse(l['unit_price']?.toString() ?? '0') ?? 0.0;
+        final taxRate = double.tryParse(l['tax_rate']?.toString() ?? '5') ?? 5.0;
+
+        final matched = _catalog.where((c) => c.id == itemId).firstOrNull ??
+            PosMenuItem(
+              id: itemId,
+              name: itemName,
+              price: unitPrice,
+              categoryId: 'all',
+              taxPercent: taxRate,
+            );
+
+        loadedItems.add(PosCartItem(
+          item: matched,
+          quantity: qty,
+          notes: l['special_instructions']?.toString(),
+        ));
+      }
+
+      if (mounted) {
+        setState(() {
+          _activeOrderId = active!['id']?.toString();
+          _activeOrderNumber = active['order_number']?.toString();
+          _activeOrderVersion = (active['version'] is num)
+              ? (active['version'] as num).toInt()
+              : 1;
+          _cart.clear();
+          _cart.addAll(loadedItems);
+          _initialCart = List.from(loadedItems);
+          if (active['notes'] != null && active['notes'].toString().isNotEmpty) {
+            _notesController.text = active['notes'].toString();
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Loaded live order for ${table.label} (${_activeOrderNumber ?? ""})'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
       }
     }
   }
@@ -165,20 +259,62 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     });
   }
 
+  void _removeItem(int index) {
+    setState(() {
+      _cart.removeAt(index);
+    });
+  }
+
+  void _incrementByItem(PosMenuItem item) {
+    _addItem(item);
+  }
+
+  void _decrementByItem(PosMenuItem item) {
+    setState(() {
+      final idx = _cart.indexWhere((c) => c.item.id == item.id);
+      if (idx >= 0) {
+        if (_cart[idx].quantity > 1) {
+          _cart[idx] = _cart[idx].copyWith(quantity: _cart[idx].quantity - 1);
+        } else {
+          _cart.removeAt(idx);
+        }
+      }
+    });
+  }
+
+  void _clearCart() {
+    setState(() {
+      if (_activeOrderId != null && _activeOrderId!.isNotEmpty && _initialCart.isNotEmpty) {
+        _cart.clear();
+        _cart.addAll(_initialCart.map((e) => e.copyWith()).toList());
+      } else {
+        _cart.clear();
+        _notesController.clear();
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cart cleared'),
+        duration: Duration(seconds: 1),
+        backgroundColor: Color(0xFF64748B),
+      ),
+    );
+  }
+
   double get _cartTotal =>
       _cart.fold(0.0, (sum, i) => sum + (i.item.price * i.quantity));
 
   Future<void> _submitOrderToKitchenAndPos() async {
     if (_selectedTableId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a table.')),
+        const SnackBar(content: Text('Please select a table first.')),
       );
       return;
     }
 
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cart is empty. Please add items.')),
+        const SnackBar(content: Text('Cart is empty. Please add dishes.')),
       );
       return;
     }
@@ -191,43 +327,108 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final floor = matchedTable?.floor ?? '1st Floor';
     final notes = _notesController.text.trim();
 
+    final prefs = await SharedPreferences.getInstance();
+    final outletId = prefs.getString('selected_shop_id') ??
+        prefs.getString('assigned_outlet_id') ??
+        await InventoryService.getShopId();
+
     try {
-      // 1. Dispatch order to backend (which automatically marks table OCCUPIED & syncs POS)
-      final res = await RestaurantPosService.sendToKitchen(
-        orderType: 'DINE_IN',
-        tableId: _selectedTableId,
-        cartItems: _cart,
-        customerName: 'Served by: $_waiterName',
-        orderNotes: notes,
-      );
+      // 1. If this table already has an active order on backend, compute delta running items
+      if (_activeOrderId != null && _initialCart.isNotEmpty) {
+        final List<PosCartItem> deltaItems = [];
+        for (final cartItem in _cart) {
+          final initMatch = _initialCart
+              .where((initItem) => initItem.item.id == cartItem.item.id)
+              .firstOrNull;
+          final initQty = initMatch?.quantity ?? 0;
+          final diff = cartItem.quantity - initQty;
+          if (diff > 0) {
+            deltaItems.add(cartItem.copyWith(quantity: diff));
+          }
+        }
 
-      final orderNum = res?['order_number']?.toString() ??
-          '#ORD-${DateTime.now().millisecondsSinceEpoch % 10000}';
-      final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
-
-      // 2. Add or refresh ticket in Kitchen Display System
-      ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
-            orderId: res?['id']?.toString() ?? _selectedTableId!,
-            existingPreparedItemIds: const [],
-            newlyAddedItemIds: _cart.map((c) => c.item.id).toList(),
+        if (deltaItems.isEmpty) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No new running items to add to this order.'),
+              duration: Duration(seconds: 2),
+            ),
           );
+          setState(() => _isSubmitting = false);
+          return;
+        }
 
-      // 3. Print KOT if thermal printer is configured
-      if (mounted) {
-        KotPrinterHelper.printKotDirectly(
-          context: context,
-          kotNumber: kotNum,
-          orderNumber: orderNum,
-          orderType: 'Dine-in (Waiter)',
-          tableLabel: tableLabel,
-          floor: floor,
-          customerName: 'Waiter: $_waiterName',
-          orderNotes: notes,
-          items: _cart,
+        // Append new running items to existing active order on backend
+        await RestaurantPosService.appendItemsToOrder(
+          orderId: _activeOrderId!,
+          newItems: deltaItems,
+          expectedVersion: _activeOrderVersion ?? 1,
         );
+
+        final orderNum = _activeOrderNumber ?? 'ORD';
+        final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
+
+        // Update KDS live status (already prepared items stay SERVED/DONE, delta items get NEW ADDED)
+        ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
+          orderId: _activeOrderId!,
+          existingPreparedItemIds: _initialCart.map((e) => e.item.id).toList(),
+          newlyAddedItemIds: deltaItems.map((d) => d.item.id).toList(),
+        );
+
+        // Thermal print KOT for newly added running items
+        if (mounted) {
+          KotPrinterHelper.printKotDirectly(
+            context: context,
+            kotNumber: kotNum,
+            orderNumber: orderNum,
+            orderType: 'Dine-in Running Items (Waiter)',
+            tableLabel: tableLabel,
+            floor: floor,
+            customerName: 'Waiter: $_waiterName',
+            orderNotes: notes,
+            items: deltaItems,
+          );
+        }
+      } else {
+        // 2. New Order on Empty Table -> Send full order to Kitchen & POS
+        final res = await RestaurantPosService.sendToKitchen(
+          orderType: 'DINE_IN',
+          tableId: _selectedTableId,
+          cartItems: _cart,
+          customerName: 'Served by: $_waiterName',
+          orderNotes: notes,
+          outletId: outletId,
+        );
+
+        final orderNum = res?['order_number']?.toString() ??
+            '#ORD-${DateTime.now().millisecondsSinceEpoch % 10000}';
+        final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
+
+        // Update KDS
+        ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
+          orderId: res?['id']?.toString() ?? _selectedTableId!,
+          existingPreparedItemIds: const [],
+          newlyAddedItemIds: _cart.map((c) => c.item.id).toList(),
+        );
+
+        // Print KOT
+        if (mounted) {
+          KotPrinterHelper.printKotDirectly(
+            context: context,
+            kotNumber: kotNum,
+            orderNumber: orderNum,
+            orderType: 'Dine-in (Waiter)',
+            tableLabel: tableLabel,
+            floor: floor,
+            customerName: 'Waiter: $_waiterName',
+            orderNotes: notes,
+            items: _cart,
+          );
+        }
       }
 
-      // 4. Reload Tables and Live Orders state
+      // Synchronize live tables, orders and KDS tickets
       await ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
       await ref.read(restaurantOrderProvider.notifier).loadOrders();
       ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
@@ -235,8 +436,12 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
       if (mounted) {
         setState(() {
           _cart.clear();
+          _initialCart.clear();
+          _activeOrderId = null;
+          _activeOrderNumber = null;
           _notesController.clear();
           _selectedTableId = null;
+          _mobileTabIndex = 0;
           _isSubmitting = false;
         });
 
@@ -248,7 +453,7 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Order for $tableLabel placed & sent to Kitchen! ($orderNum)',
+                    'Order placed & synchronized with POS & Kitchen for $tableLabel!',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -288,407 +493,278 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
       return matchesCategory && matchesQuery;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        elevation: 0.5,
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.room_service_rounded,
-                  color: Color(0xFFF59E0B), size: 20),
+    final matchedTable = tables.where((t) => t.id == _selectedTableId).firstOrNull;
+    final selectedTableLabel = matchedTable?.label ?? (_selectedTableId ?? '');
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 820;
+
+    // Responsive Menu View Component with CustomScrollView to prevent RenderFlex overflow
+    final menuView = CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+            child: WaiterTableStrip(
+              tables: tables,
+              selectedFloor: _activeFloor,
+              selectedTableId: _selectedTableId,
+              onSelectFloor: (f) => setState(() => _activeFloor = f),
+              onSelectTable: _selectTable,
+              onRefresh: () => ref
+                  .read(restaurantTableProvider.notifier)
+                  .loadTables(),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Waiter Order Pad',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Staff: $_waiterName',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh Menu & Tables',
-            onPressed: _loadMenuAndTables,
+        SliverToBoxAdapter(
+          child: WaiterCategoryStrip(
+            categories: _categories,
+            selectedCategory: _selectedCategory,
+            searchQuery: _searchQuery,
+            onSelectCategory: (catId) =>
+                setState(() => _selectedCategory = catId),
+            onSearchChanged: (q) =>
+                setState(() => _searchQuery = q),
+            onClearSearch: () =>
+                setState(() => _searchQuery = ''),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await AuthService.logout();
-              if (context.mounted) context.go('/dashboard');
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 900;
-                return Row(
-                  children: [
-                    // LEFT: Menu Discovery & Table Picker
-                    Expanded(
-                      flex: isWide ? 65 : 60,
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+          sliver: filteredItems.isEmpty
+              ? SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // 1. Table Selector Header Card
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                            child: PosTableSelector(
-                              selectedFloor: _activeFloor,
-                              selectedTableId: _selectedTableId,
-                              tables: tables,
-                              onSelectFloor: (f) => setState(() => _activeFloor = f),
-                              onSelectTable: (tid) {
-                                final match =
-                                    tables.where((t) => t.id == tid).firstOrNull;
-                                if (match != null) _selectTable(match);
-                              },
-                              onRefresh: () => ref
-                                  .read(restaurantTableProvider.notifier)
-                                  .loadTables(),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.search_off_rounded, size: 36, color: Color(0xFF94A3B8)),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No menu items match your search',
+                            style: TextStyle(
+                              color: Color(0xFF1E293B),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-
-                          // 2. Search & Category Filter Pills
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    onChanged: (v) => setState(() => _searchQuery = v),
-                                    style: const TextStyle(fontSize: 13),
-                                    decoration: InputDecoration(
-                                      isDense: true,
-                                      prefixIcon: const Icon(Icons.search_rounded,
-                                          size: 18),
-                                      hintText: 'Search dish name or code...',
-                                      hintStyle: const TextStyle(fontSize: 12),
-                                      filled: true,
-                                      fillColor: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Categories Horizontal Strip
-                          SizedBox(
-                            height: 38,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _categories.length + 1,
-                              separatorBuilder: (_, __) => const SizedBox(width: 6),
-                              itemBuilder: (context, index) {
-                                final isAll = index == 0;
-                                final catId = isAll ? 'all' : _categories[index - 1].id;
-                                final catName =
-                                    isAll ? 'All Items' : _categories[index - 1].name;
-                                final isSelected = _selectedCategory == catId;
-
-                                return ChoiceChip(
-                                  label: Text(catName),
-                                  selected: isSelected,
-                                  onSelected: (_) =>
-                                      setState(() => _selectedCategory = catId),
-                                  selectedColor: const Color(0xFFF59E0B),
-                                  labelStyle: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    color: isSelected ? Colors.white : null,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // 3. Grid of Food Dishes
-                          Expanded(
-                            child: filteredItems.isEmpty
-                                ? const Center(child: Text('No menu items found'))
-                                : GridView.builder(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(14, 4, 14, 14),
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: isWide ? 4 : 3,
-                                      childAspectRatio: 1.05,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                    ),
-                                    itemCount: filteredItems.length,
-                                    itemBuilder: (context, idx) {
-                                      final item = filteredItems[idx];
-                                      return PosMenuCard(
-                                        item: item,
-                                        onAdd: () => _addItem(item),
-                                      );
-                                    },
-                                  ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Try selecting another category or clearing search',
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
                           ),
                         ],
                       ),
                     ),
+                  ),
+                )
+              : SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isMobile
+                        ? (screenWidth >= 540 ? 3 : (screenWidth >= 340 ? 2 : 1))
+                        : (screenWidth >= 1200 ? 5 : (screenWidth >= 900 ? 4 : 3)),
+                    childAspectRatio: isMobile
+                        ? (screenWidth >= 540 ? 0.72 : (screenWidth >= 340 ? 0.76 : 1.4))
+                        : (screenWidth >= 1200 ? 0.78 : (screenWidth >= 900 ? 0.76 : 0.72)),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, idx) {
+                      final item = filteredItems[idx];
+                      final cartMatch = _cart.where((c) => c.item.id == item.id).firstOrNull;
+                      final cartQty = cartMatch?.quantity ?? 0;
+                      return WaiterMenuCard(
+                        item: item,
+                        cartQuantity: cartQty,
+                        onAdd: () => _addItem(item),
+                        onIncrement: () => _incrementByItem(item),
+                        onDecrement: () => _decrementByItem(item),
+                      );
+                    },
+                    childCount: filteredItems.length,
+                  ),
+                ),
+        ),
+      ],
+    );
 
-                    // RIGHT: Waiter Order Cart & Action Button
-                    Container(
-                      width: isWide ? 380 : 320,
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                        border: Border(
-                          left: BorderSide(
-                            color: isDark
-                                ? const Color(0xFF334155)
-                                : const Color(0xFFE2E8F0),
+    // Cart View Component
+    final cartView = WaiterCartPanel(
+      isWide: !isMobile,
+      selectedTableId: _selectedTableId,
+      selectedTableLabel: selectedTableLabel,
+      cart: _cart,
+      initialCart: _initialCart,
+      activeOrderId: _activeOrderId,
+      notesController: _notesController,
+      isSubmitting: _isSubmitting,
+      cartTotal: _cartTotal,
+      onIncrement: _incrementItem,
+      onDecrement: _decrementItem,
+      onRemove: _removeItem,
+      onClearCart: _clearCart,
+      onSubmit: _submitOrderToKitchenAndPos,
+    );
+
+    final safeTab = _mobileTabIndex.clamp(0, 1);
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      appBar: WaiterAppBar(
+        waiterName: _waiterName,
+        onRefresh: _loadMenuAndTables,
+      ),
+      bottomNavigationBar: isMobile
+          ? BottomNavigationBar(
+              currentIndex: safeTab,
+              onTap: (idx) => setState(() => _mobileTabIndex = idx.clamp(0, 1)),
+              selectedItemColor: const Color(0xFFF59E0B),
+              unselectedItemColor: const Color(0xFF94A3B8),
+              backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+              items: [
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.restaurant_menu_rounded),
+                  label: 'Menu & Tables',
+                ),
+                BottomNavigationBarItem(
+                  icon: Badge(
+                    label: Text('${_cart.length}'),
+                    isLabelVisible: _cart.isNotEmpty,
+                    backgroundColor: const Color(0xFFF59E0B),
+                    child: const Icon(Icons.receipt_long_rounded),
+                  ),
+                  label: 'Order Cart (₹${_cartTotal.toStringAsFixed(0)})',
+                ),
+              ],
+            )
+          : null,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : (isMobile
+              ? Stack(
+                  children: [
+                    IndexedStack(
+                      index: safeTab,
+                      children: [
+                        menuView,
+                        cartView,
+                      ],
+                    ),
+                    // Floating Quick View Order Pill when viewing Menu with active items
+                    if (safeTab == 0 && _cart.isNotEmpty)
+                      Positioned(
+                        bottom: 12,
+                        left: 16,
+                        right: 16,
+                        child: Material(
+                          elevation: 6,
+                          borderRadius: BorderRadius.circular(14),
+                          color: const Color(0xFFF59E0B),
+                          child: InkWell(
+                            onTap: () => setState(() => _mobileTabIndex = 1),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 16),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '${_cart.length} ${_cart.length == 1 ? 'item' : 'items'} on $selectedTableLabel',
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                      Text(
+                                        'Total: ₹${_cartTotal.toStringAsFixed(0)}',
+                                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  const Row(
+                                    children: [
+                                      Text(
+                                        'View Order',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Table Banner
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: _selectedTableId == null
-                                  ? const Color(0xFFF1F5F9)
-                                  : const Color(0xFFFEF3C7),
-                              border: const Border(
-                                bottom: BorderSide(color: Color(0xFFFDE68A)),
+                  ],
+                )
+              : Row(
+                  children: [
+                    // LEFT: Table Selector, Search, Category Chips & Menu Items
+                    Expanded(child: menuView),
+
+                    // Draggable Split Resizer Divider Handle
+                    MouseRegion(
+                      cursor: SystemMouseCursors.resizeColumn,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onHorizontalDragUpdate: (details) {
+                          setState(() {
+                            _cartWidth = (_cartWidth - details.delta.dx).clamp(280.0, 560.0);
+                          });
+                        },
+                        onDoubleTap: () {
+                          setState(() {
+                            _cartWidth = 360.0;
+                          });
+                        },
+                        child: Container(
+                          width: 12,
+                          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                          child: Center(
+                            child: Container(
+                              width: 4,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.table_bar_rounded,
-                                  color: _selectedTableId == null
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFFD97706),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    _selectedTableId != null
-                                        ? 'Active Table: ${tables.where((t) => t.id == _selectedTableId).firstOrNull?.label ?? _selectedTableId}'
-                                        : 'No Table Selected (Tap Table above)',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: _selectedTableId == null
-                                          ? const Color(0xFF64748B)
-                                          : const Color(0xFF92400E),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-
-                          // Cart Items List
-                          Expanded(
-                            child: _cart.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      'Order is empty.\nTap dishes to add to this table.',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                          color: Color(0xFF94A3B8), fontSize: 13),
-                                    ),
-                                  )
-                                : ListView.separated(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    itemCount: _cart.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 8),
-                                    itemBuilder: (context, idx) {
-                                      final item = _cart[idx];
-                                      return Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  item.item.name,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '₹${item.item.price.toStringAsFixed(0)} each',
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Color(0xFF64748B),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(
-                                                    Icons.remove_circle_outline,
-                                                    size: 20),
-                                                color: const Color(0xFFEF4444),
-                                                onPressed: () => _decrementItem(idx),
-                                              ),
-                                              Text(
-                                                '${item.quantity}',
-                                                style: const TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w900),
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(
-                                                    Icons.add_circle_outline,
-                                                    size: 20),
-                                                color: const Color(0xFF10B981),
-                                                onPressed: () => _incrementItem(idx),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                          ),
-
-                          // Notes & Order Total Summary
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF0F172A)
-                                  : const Color(0xFFF8FAFC),
-                              border: Border(
-                                top: BorderSide(
-                                  color: isDark
-                                      ? const Color(0xFF334155)
-                                      : const Color(0xFFE2E8F0),
-                                ),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                TextField(
-                                  controller: _notesController,
-                                  style: const TextStyle(fontSize: 12),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    hintText:
-                                        'Order notes (e.g. less oil, extra chutney)...',
-                                    prefixIcon: const Icon(Icons.note_alt_rounded,
-                                        size: 16),
-                                    filled: true,
-                                    fillColor: isDark
-                                        ? const Color(0xFF1E293B)
-                                        : Colors.white,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Estimated Total',
-                                        style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold)),
-                                    Text(
-                                      '₹${_cartTotal.toStringAsFixed(0)}',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        color: Color(0xFF10B981),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFF59E0B),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  onPressed: _isSubmitting
-                                      ? null
-                                      : _submitOrderToKitchenAndPos,
-                                  icon: _isSubmitting
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : const Icon(Icons.soup_kitchen_rounded),
-                                  label: Text(
-                                    _isSubmitting
-                                        ? 'Dispatching Order...'
-                                        : 'Place Order & Send KOT',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
+
+                    // RIGHT: Order Cart Pad with adjustable width
+                    SizedBox(
+                      width: _cartWidth,
+                      height: double.infinity,
+                      child: cartView,
+                    ),
                   ],
-                );
-              },
-            ),
+                )),
     );
   }
 }

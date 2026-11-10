@@ -916,6 +916,7 @@ class _AddStaffUserDialogState extends State<AddStaffUserDialog> {
                 DropdownMenuItem(value: 'cashier', child: Text('Billing Cashier')),
                 DropdownMenuItem(value: 'chef', child: Text('Kitchen Chef')),
                 DropdownMenuItem(value: 'inventory', child: Text('Inventory Manager')),
+                DropdownMenuItem(value: 'waiter', child: Text('Waiter / Captain')),
               ],
               onChanged: (val) {
                 if (val != null) setState(() => _selectedRole = val);

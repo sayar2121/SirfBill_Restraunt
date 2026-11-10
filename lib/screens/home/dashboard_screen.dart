@@ -150,19 +150,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ),
     ModuleCardData(
       indexText: '05',
-      title: 'Admin Panel',
-      description: 'Manage outlets, branches, staff roles and users.',
-      icon: Icons.admin_panel_settings_rounded,
-      primaryColor: Color(0xFF6366F1), // Indigo
-      nextRoute: '/admin',
-    ),
-    ModuleCardData(
-      indexText: '06',
       title: 'Waiter / Captain',
       description: 'Table order taking & automated KOT dispatch.',
       icon: Icons.room_service_rounded,
       primaryColor: Color(0xFFF59E0B), // Amber
       nextRoute: '/waiter',
+    ),
+    ModuleCardData(
+      indexText: '06',
+      title: 'Admin Panel',
+      description: 'Manage outlets, branches, staff roles and users.',
+      icon: Icons.admin_panel_settings_rounded,
+      primaryColor: Color(0xFF6366F1), // Indigo
+      nextRoute: '/admin',
     ),
   ];
 
@@ -460,29 +460,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               ),
                               SizedBox(height: isCompactHeight ? 24 : 36),
 
-                              // Responsive Cards Layout: 5 Cards in 1 Row on Desktop
+                              // Responsive Cards Layout: 6 Cards in 1 Row on Desktop
                               Center(
                                 child: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 1380),
+                                  constraints: const BoxConstraints(maxWidth: 1560),
                                   child: LayoutBuilder(
                                     builder: (context, cardConstraints) {
                                       final width = cardConstraints.maxWidth;
 
                                       // Breakpoints calculation:
-                                      // Wide desktop (>= 1100px): All 5 cards in 1 sleek row
-                                      // Medium laptop / tablet (>= 720px): 3 or 4 cards per row
-                                      // Tablet / Small desktop (>= 500px): 2 cards per row
-                                      // Mobile (< 500px): 1 card per row
+                                      // Desktop / Laptop (>= 1000px): All 6 cards in 1 sleek row
+                                      // Medium screen / tablet (>= 680px): 3 cards per row (2 rows of 3)
+                                      // Small tablet (>= 460px): 2 cards per row (3 rows of 2)
+                                      // Mobile (< 460px): 1 card per row
                                       int crossAxisCount;
                                       double childAspectRatio;
 
-                                      if (width >= 1100) {
-                                        crossAxisCount = 5;
-                                        childAspectRatio = isCompactHeight ? 0.88 : 0.78;
-                                      } else if (width >= 800) {
+                                      if (width >= 1000) {
+                                        crossAxisCount = 6;
+                                        childAspectRatio = isCompactHeight ? 0.84 : 0.73;
+                                      } else if (width >= 680) {
                                         crossAxisCount = 3;
                                         childAspectRatio = 0.95;
-                                      } else if (width >= 520) {
+                                      } else if (width >= 460) {
                                         crossAxisCount = 2;
                                         childAspectRatio = 1.05;
                                       } else {
@@ -496,8 +496,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         itemCount: _modules.length,
                                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                           crossAxisCount: crossAxisCount,
-                                          crossAxisSpacing: 14,
-                                          mainAxisSpacing: 14,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
                                           childAspectRatio: childAspectRatio,
                                         ),
                                         itemBuilder: (context, index) {
