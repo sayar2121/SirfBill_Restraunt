@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.40
+      RELEASE_TAG: v1.0.41
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [NEW WAITER MODULE] Dedicated Waiter / Captain role login & quick table order pad\n• [AUTOMATED DISPATCH] Order punches sync immediately with POS billing counter & Kitchen Display System (KDS)\n• [RUNNING ITEMS] Seamlessly add items to occupied tables with existing items preserved as SERVED/DONE and new items highlighted\n• [LIVE TABLE TIMERS] Real-time ticking HH:MM:SS duration counters on occupied tables\n• [ZERO OVERFLOW] Layout fully optimized for tablets, touch displays, and POS terminals",
+            "release_notes": "• [TOUCHSCREEN OPTIMIZATION] Large 38px steppers, intuitive trash-on-1 removal, and quick Clear Cart with confirmation\n• [RENDER & OVERFLOW FIXES] Zero overflow on any zoom level, adaptive table header, and scroll-safe custom slivers\n• [POS BILLING FIX] Fixed table selector and customer header scrolling in POS billing cart\n• [DASHBOARD] Placed Waiter / Captain station prominently ahead of Admin Panel",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
