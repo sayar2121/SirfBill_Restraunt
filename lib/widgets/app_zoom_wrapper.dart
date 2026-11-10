@@ -113,18 +113,19 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
                 final targetW = w / zoom;
                 final targetH = h / zoom;
 
+                // FittedBox correctly remaps hit-test coordinates (unlike Transform.scale
+                // which only affects painting). RenderFittedBox.hitTestChildren applies
+                // the inverse transform for input events, so clicks on the right/bottom
+                // area work correctly when zoomed out.
                 scaledContent = SizedBox(
                   width: w,
                   height: h,
-                  child: Transform.scale(
-                    scale: zoom,
+                  child: FittedBox(
+                    fit: BoxFit.fill,
                     alignment: Alignment.topLeft,
-                    child: OverflowBox(
-                      alignment: Alignment.topLeft,
-                      minWidth: targetW,
-                      maxWidth: targetW,
-                      minHeight: targetH,
-                      maxHeight: targetH,
+                    child: SizedBox(
+                      width: targetW,
+                      height: targetH,
                       child: MediaQuery(
                         data: MediaQuery.of(context).copyWith(
                           size: Size(targetW, targetH),

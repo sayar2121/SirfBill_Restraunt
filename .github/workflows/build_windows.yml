@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.30
+      RELEASE_TAG: v1.0.31
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [ZOOM FULLSCREEN FIX] Eliminated black border margins when zooming out via OverflowBox virtual viewport\n• [FULL WIDTH EXPANSION] App content dynamically stretches 100% across entire monitor at any zoom level\n• [DESKTOP ZOOM] Full in-exe Zoom In & Out feature via Ctrl + / Ctrl - / Ctrl + MouseWheel\n• [POS MENU GRID] Fixed oversized food cards with compact responsive columns & aspect ratios",
+            "release_notes": "• [CRITICAL FIX] Zoom click alignment fixed — right panel buttons (Pay, KOT, Bill, Hold) now respond correctly at all zoom levels\n• [FittedBox] Replaced Transform.scale+OverflowBox with FittedBox for proper hit-test coordinate remapping\n• [ZOOM] Ctrl+/-, Ctrl+Scroll, Ctrl+0 reset all work reliably at any zoom level",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
