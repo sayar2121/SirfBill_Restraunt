@@ -78,9 +78,9 @@ class WaiterMenuCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Food Image Header with 16:9.5 ratio
+              // 1. Food Image Header with 16:9 ratio
               AspectRatio(
-                aspectRatio: 16 / 9.5,
+                aspectRatio: 16 / 9,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -196,74 +196,85 @@ class WaiterMenuCard extends StatelessWidget {
                 ),
               ),
 
-              // 2. Info & Action Section (Compact, balanced, no void)
+              // 2. Info & Action Section (Compact, balanced, overflow-safe)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(9, 5, 9, 7),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Dish Name
-                      Flexible(
-                        child: Text(
-                          item.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            height: 1.2,
+                      // Dish Name (Controlled height & scale-safe)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Text(
+                            item.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              height: 1.15,
+                            ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 2),
 
                       // Price & Stepper Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Price & Code
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '₹${item.price.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF059669),
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              if (item.shortCode != null && item.shortCode!.isNotEmpty) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    item.shortCode!,
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                      fontWeight: FontWeight.w700,
+                          // Price & Code (Flexible & scale-safe)
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    '₹${item.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF059669),
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ],
+                                  if (item.shortCode != null && item.shortCode!.isNotEmpty) ...[
+                                    const SizedBox(width: 3),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        item.shortCode!,
+                                        style: TextStyle(
+                                          fontSize: 8.5,
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 4),
 
                           // In-Card Stepper or Add button
                           if (cartQuantity > 0)
                             Container(
-                              height: 32,
+                              height: 30,
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF59E0B),
                                 borderRadius: BorderRadius.circular(8),
@@ -284,21 +295,21 @@ class WaiterMenuCard extends StatelessWidget {
                                       onTap: onDecrement,
                                       borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
                                       child: Container(
-                                        width: 30,
-                                        height: 32,
+                                        width: 26,
+                                        height: 30,
                                         alignment: Alignment.center,
-                                        child: const Icon(Icons.remove_rounded, color: Colors.white, size: 16),
+                                        child: const Icon(Icons.remove_rounded, color: Colors.white, size: 15),
                                       ),
                                     ),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 3),
                                     child: Text(
                                       '$cartQuantity',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w900,
-                                        fontSize: 13,
+                                        fontSize: 12.5,
                                       ),
                                     ),
                                   ),
@@ -308,10 +319,10 @@ class WaiterMenuCard extends StatelessWidget {
                                       onTap: onIncrement ?? onAdd,
                                       borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
                                       child: Container(
-                                        width: 30,
-                                        height: 32,
+                                        width: 26,
+                                        height: 30,
                                         alignment: Alignment.center,
-                                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 15),
                                       ),
                                     ),
                                   ),
@@ -325,7 +336,7 @@ class WaiterMenuCard extends StatelessWidget {
                                 onTap: onAdd,
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
@@ -341,12 +352,12 @@ class WaiterMenuCard extends StatelessWidget {
                                   child: const Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.add_rounded, size: 15, color: Color(0xFFD97706)),
-                                      SizedBox(width: 3),
+                                      Icon(Icons.add_rounded, size: 14, color: Color(0xFFD97706)),
+                                      SizedBox(width: 2),
                                       Text(
                                         'Add',
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 11.5,
                                           fontWeight: FontWeight.w800,
                                           color: Color(0xFFD97706),
                                         ),

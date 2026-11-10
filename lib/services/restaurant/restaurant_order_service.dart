@@ -121,6 +121,7 @@ class RestaurantOrderService {
         final payload = {
           if (includeExpectedVersion) 'expected_version': ver,
           'lines': linesData,
+          'items': linesData,
         };
         debugPrint('PATCH /api/restaurant/orders/$orderId/items payload: $payload');
         return _dio.patch('/api/restaurant/orders/$orderId/items', data: payload);
@@ -130,24 +131,43 @@ class RestaurantOrderService {
       try {
         res = await sendPatch(currentVer, includeExpectedVersion: true);
       } catch (firstErr) {
-        if (firstErr is DioException && firstErr.response?.statusCode == 409) {
-          debugPrint('409 Conflict detected for order $orderId. Fetching latest version from server...');
-          final latestOrder = await fetchOrderById(orderId);
-          if (latestOrder != null && latestOrder['version'] != null) {
-            final serverVer = (latestOrder['version'] is num)
-                ? (latestOrder['version'] as num).toInt()
-                : (int.tryParse(latestOrder['version'].toString()) ?? currentVer + 1);
-            debugPrint('Retrying with fetched server version: $serverVer');
-            try {
-              res = await sendPatch(serverVer, includeExpectedVersion: true);
-            } catch (_) {}
-          }
+        if (firstErr is DioException) {
+          final sc = firstErr.response?.statusCode;
+          debugPrint('PATCH error $sc for order $orderId: ${firstErr.response?.data}');
 
-          if (res == null) {
-            debugPrint('Retrying without expected_version key in payload...');
+          if (sc == 409) {
+            debugPrint('409 Conflict detected for order $orderId. Fetching latest version from server...');
+            final latestOrder = await fetchOrderById(orderId);
+            if (latestOrder != null && latestOrder['version'] != null) {
+              final serverVer = (latestOrder['version'] is num)
+                  ? (latestOrder['version'] as num).toInt()
+                  : (int.tryParse(latestOrder['version'].toString()) ?? currentVer + 1);
+              debugPrint('Retrying with fetched server version: $serverVer');
+              try {
+                res = await sendPatch(serverVer, includeExpectedVersion: true);
+              } catch (_) {}
+            }
+
+            if (res == null) {
+              debugPrint('Retrying without expected_version key in payload...');
+              try {
+                res = await sendPatch(currentVer, includeExpectedVersion: false);
+              } catch (_) {}
+            }
+          } else if (sc == 400 || sc == 422 || sc == 405 || sc == 403) {
+            // When order is in SERVED or HOLD status, backend might disallow direct PATCH.
+            // Transition status back to SENT_TO_KITCHEN or OPEN, then retry!
+            debugPrint('Order in completed/served state. Attempting transition to SENT_TO_KITCHEN...');
             try {
+              await _dio.post(
+                '/api/restaurant/orders/$orderId/transitions',
+                queryParameters: {'payload': 'SENT_TO_KITCHEN'},
+                data: {'target_status': 'SENT_TO_KITCHEN', 'status': 'SENT_TO_KITCHEN'},
+              );
               res = await sendPatch(currentVer, includeExpectedVersion: false);
-            } catch (_) {}
+            } catch (trErr) {
+              debugPrint('Transition retry failed: $trErr');
+            }
           }
         }
 

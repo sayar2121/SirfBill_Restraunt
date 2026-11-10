@@ -4,11 +4,17 @@ import '../../../services/auth_service.dart';
 
 class WaiterAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String waiterName;
+  final String restaurantName;
+  final int readyOrdersCount;
+  final VoidCallback? onOpenReadyNotifications;
   final VoidCallback onRefresh;
 
   const WaiterAppBar({
     super.key,
     required this.waiterName,
+    this.restaurantName = '',
+    this.readyOrdersCount = 0,
+    this.onOpenReadyNotifications,
     required this.onRefresh,
   });
 
@@ -81,17 +87,38 @@ class WaiterAppBar extends StatelessWidget implements PreferredSizeWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Row(
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'Waiter Order Pad',
-                            style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
+                          Flexible(
+                            child: Text(
+                              restaurantName.isNotEmpty ? restaurantName : 'Waiter Order Pad',
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (restaurantName.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'WAITER',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFD97706),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       Row(
@@ -128,6 +155,49 @@ class WaiterAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
+        // Ready Orders Notification Button (when food is cooked and ready to serve)
+        if (readyOrdersCount > 0) ...[
+          Tooltip(
+            message: '$readyOrdersCount order(s) ready to serve!',
+            child: InkWell(
+              onTap: onOpenReadyNotifications,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF10B981), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.notifications_active_rounded, size: 16, color: Color(0xFF10B981)),
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '$readyOrdersCount Ready',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+
         // Back to Dashboard / Modules
         Tooltip(
           message: 'Back to Modules',

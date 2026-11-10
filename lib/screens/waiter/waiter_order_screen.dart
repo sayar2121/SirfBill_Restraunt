@@ -9,6 +9,8 @@ import '../../providers/restaurant_order_provider.dart';
 import '../../providers/restaurant_table_provider.dart';
 import '../../services/inventory_service.dart';
 import '../../services/restaurant_pos_service.dart';
+import '../../services/shop_service.dart';
+import '../../services/shop_settings_service.dart';
 import '../../utils/kot_printer_helper.dart';
 import 'widgets/waiter_app_bar.dart';
 import 'widgets/waiter_table_strip.dart';
@@ -28,6 +30,7 @@ class WaiterOrderScreen extends ConsumerStatefulWidget {
 
 class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   String _waiterName = 'Waiter';
+  String _restaurantName = '';
   String _activeFloor = '';
   String? _selectedTableId;
   String _selectedCategory = 'all';
@@ -59,11 +62,12 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     _loadWaiterInfo();
     _loadMenuAndTables();
 
-    // Auto-refresh tables and orders state every 5 seconds for real-time live sync
+    // Auto-refresh tables, orders, and kitchen tickets state every 5 seconds for real-time live sync
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
         ref.read(restaurantOrderProvider.notifier).loadOrders();
+        ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
       }
     });
   }
@@ -80,8 +84,39 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final name = prefs.getString('user_name') ??
         prefs.getString('role_login_name') ??
         'Waiter';
+
+    String restaurantName = prefs.getString('assigned_outlet_name') ?? '';
+    if (restaurantName.isEmpty) {
+      restaurantName = prefs.getString('shop_name') ?? '';
+    }
+    if (restaurantName.isEmpty) {
+      try {
+        final settings = await ShopSettingsService.getSettings();
+        final n = settings['shop_name']?.toString();
+        if (n != null && n.trim().isNotEmpty) {
+          restaurantName = n.trim();
+        }
+      } catch (_) {}
+    }
+    if (restaurantName.isEmpty) {
+      try {
+        final shops = await ShopService.getShops();
+        final targetShopId = prefs.getString('selected_shop_id') ?? '';
+        final matched = shops.where((s) => s.id == targetShopId).firstOrNull ?? shops.firstOrNull;
+        if (matched != null && matched.name.isNotEmpty) {
+          restaurantName = matched.name;
+        }
+      } catch (_) {}
+    }
+    if (restaurantName.isEmpty) {
+      restaurantName = 'SirfBill Restaurant';
+    }
+
     if (mounted) {
-      setState(() => _waiterName = name);
+      setState(() {
+        _waiterName = name;
+        _restaurantName = restaurantName;
+      });
     }
   }
 
@@ -106,9 +141,10 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
       final items = await RestaurantPosService.fetchMenuItems(outletId: targetShopId);
       final categories = await RestaurantPosService.fetchCategories(outletId: targetShopId);
 
-      // Refresh live dining tables and live order tickets
+      // Refresh live dining tables, orders, and KDS tickets
       await ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
       await ref.read(restaurantOrderProvider.notifier).loadOrders();
+      ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
 
       if (mounted) {
         setState(() {
@@ -136,88 +172,147 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     // 1. Fetch live order from dedicated table endpoint
     Map<String, dynamic>? active = await RestaurantPosService.fetchActiveOrderByTable(table.id);
 
-    // If order is completed, cancelled or paid, treat table as empty
+    // If order is settled, cancelled or paid, treat table as empty
     if (active != null) {
       final statusStr = (active['status'] ?? active['order_status'] ?? '').toString().toUpperCase();
       final paymentStatusStr = (active['payment_status'] ?? '').toString().toUpperCase();
       if (statusStr.contains('CANCEL') ||
           statusStr.contains('SETTLE') ||
-          statusStr.contains('COMPLET') ||
+          statusStr.contains('VOID') ||
           paymentStatusStr.contains('PAID')) {
         active = null;
       }
     }
 
-    // 2. Fallback: match from live orders in restaurantOrderProvider
-    if (active == null || active['lines'] == null || (active['lines'] as List).isEmpty) {
-      final orders = ref.read(restaurantOrderProvider).orders;
-      final targetLabelLower = table.label.trim().toLowerCase();
-      final matchingOrder = orders.where((ord) {
-        final matchesId = ord.tableId == table.id || ord.tableLabel == table.id;
-        final matchesLabel = ord.tableLabel != null &&
-            ord.tableLabel!.trim().toLowerCase() == targetLabelLower;
-        return (matchesId || matchesLabel) &&
-            ord.paymentStatus != PaymentStatus.paid &&
-            ord.status != OrderStatus.cancelled &&
-            ord.status != OrderStatus.completed;
-      }).firstOrNull;
+    // 2. Fallback: match from live orders in provider or fresh API fetch
+    // Matches active, held, or served dine-in orders that haven't been paid/settled!
+    RestaurantOrder? matchingOrder;
+    List<RestaurantOrder> ordersList = ref.read(restaurantOrderProvider).orders;
+    if (ordersList.isEmpty) {
+      try {
+        ordersList = await RestaurantPosService.fetchOrders(limit: 100);
+      } catch (_) {}
+    }
 
-      if (matchingOrder != null) {
-        active = await RestaurantPosService.fetchOrderById(matchingOrder.id);
+    final targetId = table.id.trim().toLowerCase();
+    final targetLabel = table.label.trim().toLowerCase();
+    final targetCleanNum = targetLabel.replaceAll(RegExp(r'[^0-9]'), '');
+
+    for (final ord in ordersList) {
+      if (ord.paymentStatus == PaymentStatus.paid ||
+          ord.status == OrderStatus.cancelled) {
+        continue;
+      }
+
+      final ordId = (ord.tableId ?? '').trim().toLowerCase();
+      final ordLabel = (ord.tableLabel ?? '').trim().toLowerCase();
+      final ordCleanNum = ordLabel.replaceAll(RegExp(r'[^0-9]'), '');
+
+      bool isMatch = false;
+      if (ordId.isNotEmpty && (ordId == targetId || ordId == targetLabel)) {
+        isMatch = true;
+      } else if (ordLabel.isNotEmpty && (ordLabel == targetLabel || ordLabel == targetId)) {
+        isMatch = true;
+      } else if (targetCleanNum.isNotEmpty && ordCleanNum.isNotEmpty && targetCleanNum == ordCleanNum) {
+        isMatch = true;
+      }
+
+      if (isMatch) {
+        matchingOrder = ord;
+        break;
       }
     }
 
-    // If an active order exists on this table, load its real live dishes!
-    if (active != null && active['lines'] is List && (active['lines'] as List).isNotEmpty) {
-      final List lines = active['lines'];
-      final List<PosCartItem> loadedItems = [];
+    if (active == null && matchingOrder != null) {
+      try {
+        active = await RestaurantPosService.fetchOrderById(matchingOrder.id);
+      } catch (_) {}
+    }
 
-      for (final l in lines) {
-        final itemId = l['item_id']?.toString() ?? '';
-        final itemName = l['item_name']?.toString() ?? 'Item';
-        final qty = (l['quantity'] is num) ? (l['quantity'] as num).toInt() : 1;
-        final unitPrice = double.tryParse(l['unit_price']?.toString() ?? '0') ?? 0.0;
-        final taxRate = double.tryParse(l['tax_rate']?.toString() ?? '5') ?? 5.0;
+    // 3. Extract items from active payload OR from matchingOrder
+    final List<PosCartItem> loadedItems = [];
+    String? resolvedOrderId;
+    String? resolvedOrderNumber;
+    int resolvedVersion = 1;
+    String? resolvedNotes;
 
-        final matched = _catalog.where((c) => c.id == itemId).firstOrNull ??
-            PosMenuItem(
-              id: itemId,
-              name: itemName,
-              price: unitPrice,
-              categoryId: 'all',
-              taxPercent: taxRate,
-            );
+    final rawLines = active?['lines'] ?? active?['items'] ?? active?['order_lines'];
+    if (active != null && rawLines is List && rawLines.isNotEmpty) {
+      resolvedOrderId = (active['id'] ?? active['order_id'])?.toString();
+      resolvedOrderNumber = (active['order_number'] ?? active['order_no'])?.toString();
+      resolvedVersion = (active['version'] is num)
+          ? (active['version'] as num).toInt()
+          : (int.tryParse(active['version']?.toString() ?? '1') ?? 1);
+      resolvedNotes = active['notes']?.toString();
 
-        loadedItems.add(PosCartItem(
-          item: matched,
-          quantity: qty,
-          notes: l['special_instructions']?.toString(),
-        ));
+      for (final l in rawLines) {
+        final itemId = (l['item_id'] ?? l['menu_item_id'] ?? l['id'] ?? '').toString();
+        final itemName = (l['item_name'] ?? l['name'] ?? 'Item').toString();
+        final rawQty = l['quantity'] ?? l['qty'] ?? 1;
+        final qty = (rawQty is num) ? rawQty.toInt() : (int.tryParse(rawQty.toString()) ?? 1);
+        final rawPrice = l['unit_price'] ?? l['price'] ?? 0.0;
+        final unitPrice = (rawPrice is num) ? rawPrice.toDouble() : (double.tryParse(rawPrice.toString()) ?? 0.0);
+        final rawTax = l['tax_rate'] ?? l['tax'] ?? 5.0;
+        final taxRate = (rawTax is num) ? rawTax.toDouble() : (double.tryParse(rawTax.toString()) ?? 5.0);
+
+        final existingIdx = loadedItems.indexWhere((c) => c.item.id == itemId);
+        if (existingIdx >= 0) {
+          loadedItems[existingIdx] = loadedItems[existingIdx].copyWith(
+            quantity: loadedItems[existingIdx].quantity + qty,
+          );
+        } else {
+          final matched = _catalog.where((c) => c.id == itemId).firstOrNull ??
+              PosMenuItem(
+                id: itemId,
+                name: itemName,
+                price: unitPrice,
+                categoryId: l['category_id']?.toString() ?? 'all',
+                taxPercent: taxRate,
+              );
+
+          loadedItems.add(PosCartItem(
+            item: matched,
+            quantity: qty,
+            notes: (l['special_instructions'] ?? l['notes'])?.toString(),
+          ));
+        }
       }
+    } else if (matchingOrder != null && matchingOrder.items.isNotEmpty) {
+      resolvedOrderId = matchingOrder.id;
+      resolvedOrderNumber = matchingOrder.orderNumber;
+      resolvedNotes = matchingOrder.notes;
+      try {
+        final fresh = await RestaurantPosService.fetchOrderById(matchingOrder.id);
+        if (fresh != null && fresh['version'] != null) {
+          resolvedVersion = (fresh['version'] is num)
+              ? (fresh['version'] as num).toInt()
+              : (int.tryParse(fresh['version'].toString()) ?? 1);
+        }
+      } catch (_) {}
+      loadedItems.addAll(matchingOrder.items.map((i) => i.copyWith()));
+    }
 
-      if (mounted) {
-        setState(() {
-          _activeOrderId = active!['id']?.toString();
-          _activeOrderNumber = active['order_number']?.toString();
-          _activeOrderVersion = (active['version'] is num)
-              ? (active['version'] as num).toInt()
-              : 1;
-          _cart.clear();
-          _cart.addAll(loadedItems);
-          _initialCart = List.from(loadedItems);
-          if (active['notes'] != null && active['notes'].toString().isNotEmpty) {
-            _notesController.text = active['notes'].toString();
-          }
-        });
+    // 4. Update state with loaded existing order
+    if (loadedItems.isNotEmpty && mounted) {
+      setState(() {
+        _activeOrderId = resolvedOrderId;
+        _activeOrderNumber = resolvedOrderNumber;
+        _activeOrderVersion = resolvedVersion;
+        _cart.clear();
+        _cart.addAll(loadedItems);
+        _initialCart = List.from(loadedItems);
+        if (resolvedNotes != null && resolvedNotes.isNotEmpty) {
+          _notesController.text = resolvedNotes;
+        }
+      });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Loaded live order for ${table.label} (${_activeOrderNumber ?? ""})'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Loaded active order for ${table.label} (${resolvedOrderNumber ?? ""})'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
     }
   }
 
@@ -333,8 +428,10 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
         await InventoryService.getShopId();
 
     try {
+      final wasExistingOrder = _activeOrderId != null && _initialCart.isNotEmpty;
+
       // 1. If this table already has an active order on backend, compute delta running items
-      if (_activeOrderId != null && _initialCart.isNotEmpty) {
+      if (wasExistingOrder) {
         final List<PosCartItem> deltaItems = [];
         for (final cartItem in _cart) {
           final initMatch = _initialCart
@@ -453,7 +550,9 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Order placed & synchronized with POS & Kitchen for $tableLabel!',
+                    wasExistingOrder
+                        ? 'Running items sent to Kitchen for $tableLabel!'
+                        : 'Order placed & synchronized with POS & Kitchen for $tableLabel!',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -477,11 +576,204 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     }
   }
 
+  void _showReadyOrdersDialog(BuildContext context, List<KitchenTicket> readyTickets) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetCtx).size.height * 0.75,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.room_service_rounded, color: Color(0xFF10B981), size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Ready for Service',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          Text(
+                            '${readyTickets.length} order(s) cooked & ready to serve',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Ticket List
+              Flexible(
+                child: readyTickets.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text('No orders are currently awaiting service'),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: readyTickets.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (ctx, i) {
+                          final ticket = readyTickets[i];
+                          return Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF10B981),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            ticket.tableLabel != null ? 'Table ${ticket.tableLabel}' : 'Takeaway',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          ticket.orderNumber,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        Navigator.pop(sheetCtx);
+                                        await ref.read(kitchenDisplayProvider.notifier).updateTicketStatus(
+                                          ticket.id,
+                                          KotStatus.served,
+                                        );
+                                        ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
+                                        ref.read(restaurantOrderProvider.notifier).loadOrders();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Order for Table ${ticket.tableLabel ?? ""} marked as Served!'),
+                                              backgroundColor: const Color(0xFF10B981),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(Icons.check_rounded, size: 16),
+                                      label: const Text('Mark Served'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF10B981),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: ticket.items.map((item) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${item.quantity}x ${item.name}',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final tableState = ref.watch(restaurantTableProvider);
     final tables = tableState.tables;
+
+    // Live kitchen ticket status for ready orders
+    final kdsState = ref.watch(kitchenDisplayProvider);
+    final readyTickets = kdsState.tickets.where((t) => t.status == KotStatus.ready).toList();
+    final readyTableLabels = readyTickets.map((t) => t.tableLabel?.trim()).whereType<String>().toSet();
 
     final filteredItems = _catalog.where((item) {
       final matchesCategory =
@@ -499,101 +791,193 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 820;
 
-    // Responsive Menu View Component with CustomScrollView to prevent RenderFlex overflow
-    final menuView = CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-            child: WaiterTableStrip(
-              tables: tables,
-              selectedFloor: _activeFloor,
-              selectedTableId: _selectedTableId,
-              onSelectFloor: (f) => setState(() => _activeFloor = f),
-              onSelectTable: _selectTable,
-              onRefresh: () => ref
-                  .read(restaurantTableProvider.notifier)
-                  .loadTables(),
+    // Touch-optimized, pinned top control bar and scrollable dish catalog
+    final menuView = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Order Ready Alert Banner (Visible when any kitchen order is ready for pickup & serving)
+        if (readyTickets.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF059669), Color(0xFF10B981)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.28),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: const BoxDecoration(
+                      color: Colors.white24,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.room_service_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          readyTickets.length == 1
+                              ? 'Order Ready for Table ${readyTickets.first.tableLabel ?? "Dine-in"}!'
+                              : '${readyTickets.length} Orders Ready to Serve!',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        Text(
+                          readyTickets.length == 1
+                              ? '${readyTickets.first.items.length} item(s) cooked • Pick up from kitchen & serve'
+                              : 'Ready for: ${readyTickets.map((t) => t.tableLabel ?? "").where((l) => l.isNotEmpty).join(", ")}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showReadyOrdersDialog(context, readyTickets),
+                    icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                    label: const Text('Serve Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF059669),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        SliverToBoxAdapter(
-          child: WaiterCategoryStrip(
-            categories: _categories,
-            selectedCategory: _selectedCategory,
-            searchQuery: _searchQuery,
-            onSelectCategory: (catId) =>
-                setState(() => _selectedCategory = catId),
-            onSearchChanged: (q) =>
-                setState(() => _searchQuery = q),
-            onClearSearch: () =>
-                setState(() => _searchQuery = ''),
+
+        // 2. Sticky Table Strip (Anchored permanently at top)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+          child: WaiterTableStrip(
+            tables: tables,
+            readyTableLabels: readyTableLabels,
+            selectedFloor: _activeFloor,
+            selectedTableId: _selectedTableId,
+            onSelectFloor: (f) => setState(() => _activeFloor = f),
+            onSelectTable: _selectTable,
+            onRefresh: () => ref.read(restaurantTableProvider.notifier).loadTables(),
           ),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
-          sliver: filteredItems.isEmpty
-              ? SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.search_off_rounded, size: 36, color: Color(0xFF94A3B8)),
+
+        // 3. Sticky Category Filters & Search Bar (Anchored permanently at top)
+        WaiterCategoryStrip(
+          categories: _categories,
+          selectedCategory: _selectedCategory,
+          searchQuery: _searchQuery,
+          onSelectCategory: (catId) => setState(() => _selectedCategory = catId),
+          onSearchChanged: (q) => setState(() => _searchQuery = q),
+          onClearSearch: () => setState(() => _searchQuery = ''),
+        ),
+        const SizedBox(height: 6),
+
+        // 4. Scrollable Food Dishes Grid (Only this section scrolls underneath!)
+        Expanded(
+          child: filteredItems.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'No menu items match your search',
-                            style: TextStyle(
-                              color: Color(0xFF1E293B),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          child: const Icon(Icons.search_off_rounded, size: 36, color: Color(0xFF94A3B8)),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'No menu items match your search',
+                          style: TextStyle(
+                            color: Color(0xFF1E293B),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Try selecting another category or clearing search',
-                            style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Try selecting another category or clearing search',
+                          style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                        ),
+                      ],
                     ),
                   ),
                 )
-              : SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isMobile
-                        ? (screenWidth >= 540 ? 3 : (screenWidth >= 340 ? 2 : 1))
-                        : (screenWidth >= 1200 ? 5 : (screenWidth >= 900 ? 4 : 3)),
-                    childAspectRatio: isMobile
-                        ? (screenWidth >= 540 ? 0.72 : (screenWidth >= 340 ? 0.76 : 1.4))
-                        : (screenWidth >= 1200 ? 0.78 : (screenWidth >= 900 ? 0.76 : 0.72)),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, idx) {
-                      final item = filteredItems[idx];
-                      final cartMatch = _cart.where((c) => c.item.id == item.id).firstOrNull;
-                      final cartQty = cartMatch?.quantity ?? 0;
-                      return WaiterMenuCard(
-                        item: item,
-                        cartQuantity: cartQty,
-                        onAdd: () => _addItem(item),
-                        onIncrement: () => _incrementByItem(item),
-                        onDecrement: () => _decrementByItem(item),
-                      );
-                    },
-                    childCount: filteredItems.length,
-                  ),
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final menuWidth = constraints.maxWidth;
+                    final int cols;
+                    if (menuWidth >= 1150) {
+                      cols = 5;
+                    } else if (menuWidth >= 880) {
+                      cols = 4;
+                    } else if (menuWidth >= 580) {
+                      cols = 3;
+                    } else if (menuWidth >= 340) {
+                      cols = 2;
+                    } else {
+                      cols = 1;
+                    }
+
+                    final cardWidth = (menuWidth - (cols - 1) * 10 - 28) / cols;
+                    final cardHeight = (cardWidth * 9 / 16) + 84;
+                    final ratio = (cardWidth / cardHeight).clamp(0.58, 0.72);
+
+                    return GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: cols,
+                        childAspectRatio: ratio,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                      ),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, idx) {
+                        final item = filteredItems[idx];
+                        final cartMatch = _cart.where((c) => c.item.id == item.id).firstOrNull;
+                        final cartQty = cartMatch?.quantity ?? 0;
+                        return WaiterMenuCard(
+                          item: item,
+                          cartQuantity: cartQty,
+                          onAdd: () => _addItem(item),
+                          onIncrement: () => _incrementByItem(item),
+                          onDecrement: () => _decrementByItem(item),
+                        );
+                      },
+                    );
+                  },
                 ),
         ),
       ],
@@ -623,6 +1007,9 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: WaiterAppBar(
         waiterName: _waiterName,
+        restaurantName: _restaurantName,
+        readyOrdersCount: readyTickets.length,
+        onOpenReadyNotifications: () => _showReadyOrdersDialog(context, readyTickets),
         onRefresh: _loadMenuAndTables,
       ),
       bottomNavigationBar: isMobile

@@ -5,6 +5,7 @@ import '../../../models/restaurant_pos_models.dart';
 /// for Waitstaff / Captains to quickly view and switch dining tables.
 class WaiterTableStrip extends StatefulWidget {
   final List<DiningTable> tables;
+  final Set<String>? readyTableLabels;
   final String selectedFloor;
   final String? selectedTableId;
   final ValueChanged<String> onSelectFloor;
@@ -14,6 +15,7 @@ class WaiterTableStrip extends StatefulWidget {
   const WaiterTableStrip({
     super.key,
     required this.tables,
+    this.readyTableLabels,
     required this.selectedFloor,
     required this.selectedTableId,
     required this.onSelectFloor,
@@ -80,7 +82,7 @@ class _WaiterTableStripState extends State<WaiterTableStrip> {
           // 1. Top Header: Section Title + Filter Tabs + Floor & Refresh (Adaptive)
           LayoutBuilder(
             builder: (context, headerConstraints) {
-              final isNarrow = headerConstraints.maxWidth < 620;
+              final isNarrow = headerConstraints.maxWidth < 680;
 
               // Filter Segmented Pills: All, Free, Seated
               final filterPills = Container(
@@ -232,9 +234,14 @@ class _WaiterTableStripState extends State<WaiterTableStrip> {
               return Row(
                 children: [
                   tableTitle,
-                  const SizedBox(width: 14),
-                  filterPills,
-                  const Spacer(),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: filterPills,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   floorAndRefresh,
                 ],
               );
@@ -262,6 +269,7 @@ class _WaiterTableStripState extends State<WaiterTableStrip> {
                       final table = displayTables[idx];
                       final isSelected = table.id == widget.selectedTableId;
                       final isOccupied = table.status == TableStatus.occupied;
+                      final hasReadyOrder = widget.readyTableLabels?.contains(table.label.trim()) ?? false;
 
                       // Visual theme per state
                       Color borderC;
@@ -271,15 +279,32 @@ class _WaiterTableStripState extends State<WaiterTableStrip> {
                       String subtitle;
 
                       if (isSelected) {
-                        borderC = isOccupied ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
-                        bgC = isOccupied
-                            ? (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEE2E2))
-                            : (isDark ? const Color(0xFF38250C) : const Color(0xFFFEF3C7));
-                        accentC = isOccupied ? const Color(0xFFDC2626) : const Color(0xFFD97706);
-                        statusText = isOccupied ? 'ACTIVE' : 'SELECTED';
-                        subtitle = isOccupied
-                            ? (table.currentBillAmount > 0 ? '₹${table.currentBillAmount.toStringAsFixed(0)}' : 'Seated')
-                            : 'Selected';
+                        borderC = hasReadyOrder
+                            ? const Color(0xFF10B981)
+                            : (isOccupied ? const Color(0xFFEF4444) : const Color(0xFFF59E0B));
+                        bgC = hasReadyOrder
+                            ? (isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5))
+                            : (isOccupied
+                                ? (isDark ? const Color(0xFF451A1A) : const Color(0xFFFEE2E2))
+                                : (isDark ? const Color(0xFF38250C) : const Color(0xFFFEF3C7)));
+                        accentC = hasReadyOrder
+                            ? const Color(0xFF059669)
+                            : (isOccupied ? const Color(0xFFDC2626) : const Color(0xFFD97706));
+                        statusText = hasReadyOrder
+                            ? 'READY'
+                            : (isOccupied ? 'ACTIVE' : 'SELECTED');
+                        subtitle = hasReadyOrder
+                            ? 'Serve Now'
+                            : (isOccupied
+                                ? (table.currentBillAmount > 0 ? '₹${table.currentBillAmount.toStringAsFixed(0)}' : 'Seated')
+                                : 'Selected');
+                      } else if (hasReadyOrder) {
+                        // High-priority EMERALD READY state for dishes waiting to be served
+                        borderC = const Color(0xFF10B981);
+                        bgC = isDark ? const Color(0xFF064E3B).withValues(alpha: 0.4) : const Color(0xFFECFDF5);
+                        accentC = const Color(0xFF059669);
+                        statusText = 'READY';
+                        subtitle = 'Serve Now';
                       } else if (isOccupied) {
                         // High-contrast RED theme for Seated / Occupied tables
                         borderC = const Color(0xFFEF4444);
