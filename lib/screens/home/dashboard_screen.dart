@@ -156,6 +156,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       primaryColor: Color(0xFF6366F1), // Indigo
       nextRoute: '/admin',
     ),
+    ModuleCardData(
+      indexText: '06',
+      title: 'Waiter / Captain',
+      description: 'Table order taking & automated KOT dispatch.',
+      icon: Icons.room_service_rounded,
+      primaryColor: Color(0xFFF59E0B), // Amber
+      nextRoute: '/waiter',
+    ),
   ];
 
   Future<void> _onModuleSelected(ModuleCardData module, bool isDark) async {

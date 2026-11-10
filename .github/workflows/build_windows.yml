@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.39
+      RELEASE_TAG: v1.0.40
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [RENDERFLEX COMPLETELY FIXED] ConstrainedBox applied to cart top header ensuring zero bottom overflow at any screen height\n• [RESPONSIVE BOTTOM BAR] Added isCompact scaling for notes, financials, and action buttons\n• [LIVE MOVING TIMER] HH:MM:SS live timer on table chips ticking every second",
+            "release_notes": "• [NEW WAITER MODULE] Dedicated Waiter / Captain role login & quick table order pad\n• [AUTOMATED DISPATCH] Order punches sync immediately with POS billing counter & Kitchen Display System (KDS)\n• [RUNNING ITEMS] Seamlessly add items to occupied tables with existing items preserved as SERVED/DONE and new items highlighted\n• [LIVE TABLE TIMERS] Real-time ticking HH:MM:SS duration counters on occupied tables\n• [ZERO OVERFLOW] Layout fully optimized for tablets, touch displays, and POS terminals",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

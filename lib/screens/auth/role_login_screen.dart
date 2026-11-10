@@ -374,6 +374,8 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                           ? 'Manage digital KOTs, live kitchen tickets\nand real-time preparation status effortlessly.'
                           : widget.roleName == 'Inventory & Purchase'
                           ? 'Track ingredients, recipe consumption, suppliers\nand live stock movements accurately.'
+                          : widget.roleName.contains('Waiter')
+                          ? 'Table-side order taking, floor management\nand instant kitchen order ticket (KOT) firing.'
                           : 'Guest profiles, loyalty rewards, repeat visits\nand real-time sales performance analytics.',
                       style: TextStyle(
                         fontSize: 16,
@@ -429,6 +431,22 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                         Icons.warning_amber_rounded,
                         'Low Stock & Wastage',
                         'Real-time shortage alerts and wastage logs',
+                      ),
+                    ] else if (widget.roleName.contains('Waiter')) ...[
+                      _buildFeatureItem(
+                        Icons.table_restaurant_rounded,
+                        'Floor & Table Status',
+                        'Select live tables with real-time occupancy timers',
+                      ),
+                      _buildFeatureItem(
+                        Icons.touch_app_rounded,
+                        'Instant Menu Ordering',
+                        'Quick-tap dishes, modifiers and item instructions',
+                      ),
+                      _buildFeatureItem(
+                        Icons.soup_kitchen_rounded,
+                        'Automated KOT & POS Sync',
+                        'Orders route directly to kitchen & cashier counters',
                       ),
                     ] else ...[
                       _buildFeatureItem(
@@ -526,7 +544,11 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.admin_panel_settings,
+                widget.roleName.contains('Waiter')
+                    ? Icons.room_service_rounded
+                    : widget.roleName == 'Kitchen Display'
+                        ? Icons.soup_kitchen_rounded
+                        : Icons.admin_panel_settings,
                 size: 64,
                 color: widget.themeColor,
               ),

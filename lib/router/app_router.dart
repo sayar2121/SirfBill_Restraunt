@@ -15,6 +15,7 @@ import '../screens/counter/kitchen_display_screen.dart';
 import '../screens/counter/menu_management_screen.dart';
 import '../screens/counter/reports_screen.dart';
 import '../screens/admin/restaurant_admin_panel_screen.dart';
+import '../screens/waiter/waiter_order_screen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,6 +52,8 @@ final goRouter = GoRouter(
           return '/admin';
         } else if (role == 'KITCHEN' || role == 'CHEF' || role == 'KDS') {
           return '/kitchen';
+        } else if (role == 'WAITER' || role == 'CAPTAIN' || role == 'SERVER') {
+          return '/waiter';
         }
         return '/counter/billing';
       }
@@ -72,6 +75,10 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/kitchen',
       builder: (context, state) => const KitchenDisplayScreen(isStandalone: true),
+    ),
+    GoRoute(
+      path: '/waiter',
+      builder: (context, state) => const WaiterOrderScreen(),
     ),
     GoRoute(
       path: '/role_login',
