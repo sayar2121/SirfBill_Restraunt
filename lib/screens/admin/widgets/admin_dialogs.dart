@@ -389,13 +389,14 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
           extraData: extraData,
         );
 
-        // Automatically provision station logins for POS, Kitchen, Inventory, CRM
+        // Automatically provision station logins for POS, Kitchen, Inventory, CRM, Waiter
         final cleanCode = newShop.code.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
         final stations = [
           {'role': 'cashier', 'user': 'pos_$cleanCode@sirfbill.com', 'title': 'POS Cashier'},
           {'role': 'chef', 'user': 'kitchen_$cleanCode@sirfbill.com', 'title': 'Kitchen KDS'},
           {'role': 'manager', 'user': 'inventory_$cleanCode@sirfbill.com', 'title': 'Inventory Manager'},
           {'role': 'manager', 'user': 'crm_$cleanCode@sirfbill.com', 'title': 'Store CRM & Reports'},
+          {'role': 'waiter', 'user': 'waiter_$cleanCode@sirfbill.com', 'title': 'Waiter Captain'},
         ];
 
         for (final station in stations) {

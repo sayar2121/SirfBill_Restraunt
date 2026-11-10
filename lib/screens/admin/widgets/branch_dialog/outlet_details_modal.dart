@@ -298,6 +298,16 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
         'pass': _customPasswords['crm'] ?? '123456',
         'role': 'manager',
       },
+      {
+        'key': 'waiter',
+        'title': 'Waiter / Captain',
+        'subtitle': 'Table Order Taking & Automated KOT Dispatch',
+        'icon': Icons.room_service_rounded,
+        'color': const Color(0xFFF59E0B),
+        'userId': _customUsernames['waiter'] ?? 'waiter_$cleanCode@sirfbill.com',
+        'pass': _customPasswords['waiter'] ?? '123456',
+        'role': 'waiter',
+      },
     ];
 
     return Dialog(
