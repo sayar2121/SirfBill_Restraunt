@@ -73,13 +73,15 @@ class PosCartBottomSection extends StatelessWidget {
             gstPercent: posState.gstPercent,
             gstAmount: posState.gstAmount,
             grandTotal: posState.grandTotal,
+            isCompact: isCompact,
             onAddDiscount: onAddDiscount,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isCompact ? 4 : 8),
 
           // Action Bar (Save/Hold, Print KOT, Print Bill, Payment)
           PosBottomActionBar(
             activeOrderLabel: posState.activeOrderNumber,
+            height: isCompact ? 42 : 50,
             onSaveHold: onSaveHold,
             onPrintKot: onPrintKot,
             onPrintBill: onPrintBill,

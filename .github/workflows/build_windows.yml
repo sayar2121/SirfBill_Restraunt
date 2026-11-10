@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.38
+      RELEASE_TAG: v1.0.39
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [RENDERFLEX FIX] Completely resolved RenderFlex overflow by 150px on bottom and 62px on right\n• [RESPONSIVE TABLE HEADER] Compact Tables row with Floor icon and responsive dropdown\n• [LIVE HH:MM:SS TIMER] Moving live timer ticking every second on table chips\n• [KDS RUNNING ORDERS] Preserves served items as DONE and highlights NEW ADDED running items",
+            "release_notes": "• [RENDERFLEX COMPLETELY FIXED] ConstrainedBox applied to cart top header ensuring zero bottom overflow at any screen height\n• [RESPONSIVE BOTTOM BAR] Added isCompact scaling for notes, financials, and action buttons\n• [LIVE MOVING TIMER] HH:MM:SS live timer on table chips ticking every second",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

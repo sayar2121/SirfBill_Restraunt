@@ -6,6 +6,7 @@ class PosBottomActionBar extends StatelessWidget {
   final VoidCallback? onPrintBill;
   final VoidCallback onProceedToPayment;
   final String? activeOrderLabel;
+  final double height;
 
   const PosBottomActionBar({
     super.key,
@@ -14,6 +15,7 @@ class PosBottomActionBar extends StatelessWidget {
     this.onPrintBill,
     required this.onProceedToPayment,
     this.activeOrderLabel,
+    this.height = 50,
   });
 
   @override
@@ -30,7 +32,7 @@ class PosBottomActionBar extends StatelessWidget {
             Expanded(
               flex: 10,
               child: SizedBox(
-                height: 50,
+                height: height,
                 child: ElevatedButton(
                   onPressed: onSaveHold,
                   style: ElevatedButton.styleFrom(
@@ -66,7 +68,7 @@ class PosBottomActionBar extends StatelessWidget {
             Expanded(
               flex: 10,
               child: SizedBox(
-                height: 50,
+                height: height,
                 child: ElevatedButton(
                   onPressed: onPrintKot,
                   style: ElevatedButton.styleFrom(
@@ -100,7 +102,7 @@ class PosBottomActionBar extends StatelessWidget {
               Expanded(
                 flex: 10,
                 child: SizedBox(
-                  height: 50,
+                  height: height,
                   child: ElevatedButton(
                     onPressed: onPrintBill,
                     style: ElevatedButton.styleFrom(
@@ -135,7 +137,7 @@ class PosBottomActionBar extends StatelessWidget {
             Expanded(
               flex: 14,
               child: SizedBox(
-                height: 50,
+                height: height,
                 child: ElevatedButton(
                   onPressed: onProceedToPayment,
                   style: ElevatedButton.styleFrom(

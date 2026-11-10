@@ -6,6 +6,7 @@ class PosBillSummary extends StatelessWidget {
   final double gstPercent;
   final double gstAmount;
   final double grandTotal;
+  final bool isCompact;
   final VoidCallback onAddDiscount;
 
   const PosBillSummary({
@@ -15,6 +16,7 @@ class PosBillSummary extends StatelessWidget {
     required this.gstPercent,
     required this.gstAmount,
     required this.grandTotal,
+    this.isCompact = false,
     required this.onAddDiscount,
   });
 
@@ -27,7 +29,7 @@ class PosBillSummary extends StatelessWidget {
     return Column(
       children: [
         _buildRow('Subtotal', '₹ ${subtotal.toStringAsFixed(0)}', mutedColor, textColor),
-        const SizedBox(height: 6),
+        SizedBox(height: isCompact ? 3 : 6),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -58,9 +60,9 @@ class PosBillSummary extends StatelessWidget {
             Text('₹ ${discount.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: isCompact ? 3 : 6),
         _buildRow('GST (${gstPercent.toStringAsFixed(0)}%)', '₹ ${gstAmount.toStringAsFixed(0)}', mutedColor, textColor),
-        const Divider(height: 18),
+        Divider(height: isCompact ? 8 : 14),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

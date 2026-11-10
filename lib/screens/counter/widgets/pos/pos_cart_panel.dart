@@ -65,114 +65,119 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isCompactHeight = constraints.maxHeight < 680;
+          final isCompactHeight = constraints.maxHeight < 720;
+          final maxHeaderHeight = isCompactHeight ? (constraints.maxHeight * 0.38).clamp(160.0, 240.0) : 260.0;
+
           return Column(
             children: [
-              // 1. Header Section (wrapped in SingleChildScrollView to guarantee zero overflow)
-              SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: PosCartHeaderSection(
-                  posState: posState,
-                  liveTables: widget.liveTables,
-                  customersList: customersList,
-                  onSelectFloor: posNotifier.selectFloor,
-                  onSelectTable: (tableId) => widget.onSelectTable(tableId, posNotifier),
-                  onRefreshTables: widget.onRefreshTables,
-                  onSelectCustomer: (cust) {
-                    final name = cust['name']?.toString() ?? '';
-                    final phone = cust['phone']?.toString() ?? '';
-                    posNotifier.setCustomer(name, phone);
-                  },
-                  onClearCustomer: () => posNotifier.setCustomer('', ''),
-                  onAddNewCustomer: () => PosBillingDialogs.showAddCustomerDialog(context, posNotifier),
-                  onClearCart: () => PosOrderActionController.handleClearCart(
-                    context: context,
-                    ref: ref,
-                    posNotifier: posNotifier,
+              // 1. Constrained Scrollable Top Header Section (Guarantees zero overflow!)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxHeaderHeight),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: PosCartHeaderSection(
                     posState: posState,
+                    liveTables: widget.liveTables,
+                    customersList: customersList,
+                    onSelectFloor: posNotifier.selectFloor,
+                    onSelectTable: (tableId) => widget.onSelectTable(tableId, posNotifier),
+                    onRefreshTables: widget.onRefreshTables,
+                    onSelectCustomer: (cust) {
+                      final name = cust['name']?.toString() ?? '';
+                      final phone = cust['phone']?.toString() ?? '';
+                      posNotifier.setCustomer(name, phone);
+                    },
+                    onClearCustomer: () => posNotifier.setCustomer('', ''),
+                    onAddNewCustomer: () => PosBillingDialogs.showAddCustomerDialog(context, posNotifier),
+                    onClearCart: () => PosOrderActionController.handleClearCart(
+                      context: context,
+                      ref: ref,
+                      posNotifier: posNotifier,
+                      posState: posState,
+                    ),
                   ),
                 ),
               ),
 
-          // 2. Scrollable Middle Cart Items Section
-          Expanded(
-            child: Scrollbar(
-              controller: _cartScrollController,
-              thumbVisibility: true,
-              trackVisibility: true,
-              interactive: true,
-              thickness: 7.0,
-              radius: const Radius.circular(8),
-              child: posState.cart.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No items in order cart',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: _cartScrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      itemCount: posState.cart.length,
-                      itemBuilder: (context, index) {
-                        final cartItem = posState.cart[index];
-                        return PosCartItemTile(
-                          index: index,
-                          item: cartItem,
-                          onIncrement: () => posNotifier.incrementQty(index),
-                          onDecrement: () => posNotifier.decrementQty(index),
-                          onRemove: () => posNotifier.removeItem(index),
-                        );
-                      },
-                    ),
-            ),
-          ),
+              // 2. Flexible Scrollable Middle Cart Items Section
+              Expanded(
+                child: Scrollbar(
+                  controller: _cartScrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  interactive: true,
+                  thickness: 7.0,
+                  radius: const Radius.circular(8),
+                  child: posState.cart.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No items in order cart',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _cartScrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          itemCount: posState.cart.length,
+                          itemBuilder: (context, index) {
+                            final cartItem = posState.cart[index];
+                            return PosCartItemTile(
+                              index: index,
+                              item: cartItem,
+                              onIncrement: () => posNotifier.incrementQty(index),
+                              onDecrement: () => posNotifier.decrementQty(index),
+                              onRemove: () => posNotifier.removeItem(index),
+                            );
+                          },
+                        ),
+                ),
+              ),
 
-          // 3. Bottom Section (Notes + Bill Summary + Checkout Action Buttons)
-          PosCartBottomSection(
-            posState: posState,
-            isCompact: isCompactHeight,
-            onNotesChanged: posNotifier.setOrderNotes,
-            onAddDiscount: () => PosBillingDialogs.showDiscountDialog(context, posNotifier),
-            onSaveHold: () => PosOrderActionController.handleSaveHold(
-              context: context,
-              ref: ref,
-              posState: posState,
-              onReloadMenu: widget.onReloadMenu,
-              onSelectTable: widget.onSelectTable,
-            ),
-            onPrintKot: () => PosOrderActionController.handlePrintKot(
-              context: context,
-              ref: ref,
-              posState: posState,
-              liveTables: widget.liveTables,
-              onReloadMenu: widget.onReloadMenu,
-              onSelectTable: widget.onSelectTable,
-            ),
-            onPrintBill: () => PosOrderActionController.handlePrintCustomerBill(
-              context: context,
-              ref: ref,
-              posState: posState,
-              liveTables: widget.liveTables,
-              shopSettings: widget.shopSettings,
-              activeOutlet: widget.activeOutlet,
-              onReloadMenu: widget.onReloadMenu,
-              onSelectTable: widget.onSelectTable,
-            ),
-            onProceedToPayment: () => PosBillingDialogs.showPaymentDialog(
-              context: context,
-              ref: ref,
-              state: posState,
-              shopSettings: widget.shopSettings,
-              activeOutlet: widget.activeOutlet,
-              tables: widget.liveTables,
-              onReloadMenu: widget.onReloadMenu,
-            ),
-          ),
-        ],
-      );
-    },
-  ),
-);
+              // 3. Fixed Bottom Section (Notes + Bill Summary + Checkout Action Buttons)
+              PosCartBottomSection(
+                posState: posState,
+                isCompact: isCompactHeight,
+                onNotesChanged: posNotifier.setOrderNotes,
+                onAddDiscount: () => PosBillingDialogs.showDiscountDialog(context, posNotifier),
+                onSaveHold: () => PosOrderActionController.handleSaveHold(
+                  context: context,
+                  ref: ref,
+                  posState: posState,
+                  onReloadMenu: widget.onReloadMenu,
+                  onSelectTable: widget.onSelectTable,
+                ),
+                onPrintKot: () => PosOrderActionController.handlePrintKot(
+                  context: context,
+                  ref: ref,
+                  posState: posState,
+                  liveTables: widget.liveTables,
+                  onReloadMenu: widget.onReloadMenu,
+                  onSelectTable: widget.onSelectTable,
+                ),
+                onPrintBill: () => PosOrderActionController.handlePrintCustomerBill(
+                  context: context,
+                  ref: ref,
+                  posState: posState,
+                  liveTables: widget.liveTables,
+                  shopSettings: widget.shopSettings,
+                  activeOutlet: widget.activeOutlet,
+                  onReloadMenu: widget.onReloadMenu,
+                  onSelectTable: widget.onSelectTable,
+                ),
+                onProceedToPayment: () => PosBillingDialogs.showPaymentDialog(
+                  context: context,
+                  ref: ref,
+                  state: posState,
+                  shopSettings: widget.shopSettings,
+                  activeOutlet: widget.activeOutlet,
+                  tables: widget.liveTables,
+                  onReloadMenu: widget.onReloadMenu,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
