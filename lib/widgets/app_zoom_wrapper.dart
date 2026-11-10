@@ -60,6 +60,10 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
           ref.read(zoomProvider.notifier).zoomIn();
           _triggerIndicator();
         },
+        const SingleActivator(LogicalKeyboardKey.equal, control: true, shift: true): () {
+          ref.read(zoomProvider.notifier).zoomIn();
+          _triggerIndicator();
+        },
         const SingleActivator(LogicalKeyboardKey.add, control: true): () {
           ref.read(zoomProvider.notifier).zoomIn();
           _triggerIndicator();
