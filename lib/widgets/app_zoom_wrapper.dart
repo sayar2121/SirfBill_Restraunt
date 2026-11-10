@@ -106,16 +106,27 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
               Widget scaledContent = widget.child;
 
               if (zoom != 1.0) {
+                final targetW = w / zoom;
+                final targetH = h / zoom;
+
                 scaledContent = SizedBox(
                   width: w,
                   height: h,
                   child: Transform.scale(
                     scale: zoom,
                     alignment: Alignment.topLeft,
-                    child: SizedBox(
-                      width: w / zoom,
-                      height: h / zoom,
-                      child: widget.child,
+                    child: OverflowBox(
+                      alignment: Alignment.topLeft,
+                      minWidth: targetW,
+                      maxWidth: targetW,
+                      minHeight: targetH,
+                      maxHeight: targetH,
+                      child: MediaQuery(
+                        data: MediaQuery.of(context).copyWith(
+                          size: Size(targetW, targetH),
+                        ),
+                        child: widget.child,
+                      ),
                     ),
                   ),
                 );
@@ -249,3 +260,4 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
     );
   }
 }
+
