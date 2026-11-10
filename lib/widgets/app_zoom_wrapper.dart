@@ -172,7 +172,6 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
                                     constraints: const BoxConstraints(maxWidth: 28, maxHeight: 28),
                                     padding: EdgeInsets.zero,
                                     icon: const Icon(Icons.remove_rounded, color: Colors.white, size: 16),
-                                    tooltip: 'Zoom Out (Ctrl -)',
                                     onPressed: () {
                                       ref.read(zoomProvider.notifier).zoomOut();
                                       _triggerIndicator();
@@ -213,7 +212,6 @@ class _AppZoomWrapperState extends ConsumerState<AppZoomWrapper> {
                                     constraints: const BoxConstraints(maxWidth: 28, maxHeight: 28),
                                     padding: EdgeInsets.zero,
                                     icon: const Icon(Icons.add_rounded, color: Colors.white, size: 16),
-                                    tooltip: 'Zoom In (Ctrl +)',
                                     onPressed: () {
                                       ref.read(zoomProvider.notifier).zoomIn();
                                       _triggerIndicator();
