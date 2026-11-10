@@ -133,8 +133,11 @@ class PosOrderActionController {
       if (updateRes != null) {
         final orderNum = posState.activeOrderNumber ?? 'Order';
         final tableId = posState.selectedTableId;
+        // Reset KDS ticket status so newly added running items appear active in the kitchen
+        ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(posState.activeOrderId!);
         ref.read(restaurantOrderProvider.notifier).loadOrders();
         ref.read(restaurantTableProvider.notifier).loadTables();
+        ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
         onReloadMenu();
         if (tableId != null) {
           await onSelectTable(
@@ -223,6 +226,7 @@ class PosOrderActionController {
     required RestaurantPosState posState,
     required List<DiningTable> liveTables,
     required VoidCallback onReloadMenu,
+    Future<void> Function(String tableId, RestaurantPosNotifier posNotifier, {bool showFeedback})? onSelectTable,
   }) async {
     if (posState.cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -248,6 +252,72 @@ class PosOrderActionController {
     final custName = posState.customerName;
     final notes = posState.orderNotes;
     final orderTypeStr = posState.orderType.name;
+
+    // If this table already has an active order, append new items instead of failing to recreate
+    if (posState.activeOrderId != null) {
+      final List<PosCartItem> deltaItems = [];
+      final initialItems = posState.initialCart ?? const <PosCartItem>[];
+      for (final cartItem in cartSnapshot) {
+        final initialMatch = initialItems
+            .where((initItem) => initItem.item.id == cartItem.item.id)
+            .firstOrNull;
+        final initialQty = initialMatch?.quantity ?? 0;
+        final diffQty = cartItem.quantity - initialQty;
+        if (diffQty > 0) {
+          deltaItems.add(cartItem.copyWith(quantity: diffQty));
+        }
+      }
+
+      final itemsToSend = deltaItems.isNotEmpty ? deltaItems : cartSnapshot;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dispatching running items to Kitchen for order ${posState.activeOrderNumber ?? ""}...')),
+      );
+
+      await RestaurantPosService.appendItemsToOrder(
+        orderId: posState.activeOrderId!,
+        newItems: itemsToSend,
+        expectedVersion: posState.activeOrderVersion ?? 1,
+      );
+
+      final orderNum = posState.activeOrderNumber ?? 'ORD';
+      final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
+
+      ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(posState.activeOrderId!);
+      ref.read(restaurantOrderProvider.notifier).loadOrders();
+      ref.read(restaurantTableProvider.notifier).loadTables();
+      ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
+      onReloadMenu();
+
+      final tableId = posState.selectedTableId;
+      if (posState.orderType == OrderType.dineIn && tableId != null && onSelectTable != null) {
+        await onSelectTable(
+          tableId,
+          ref.read(restaurantPosProvider.notifier),
+          showFeedback: false,
+        );
+      }
+
+      if (context.mounted) {
+        KotPrinterHelper.printKotDirectly(
+          context: context,
+          kotNumber: kotNum,
+          orderNumber: orderNum,
+          orderType: orderTypeStr,
+          tableLabel: tableLabel,
+          floor: floor,
+          customerName: custName,
+          orderNotes: notes,
+          items: itemsToSend,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('KOT sent to kitchen for updated items on $orderNum!'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Sending KOT to Kitchen...')),
@@ -419,8 +489,10 @@ class PosOrderActionController {
             newItems: deltaItems,
             expectedVersion: posState.activeOrderVersion ?? 1,
           );
+          ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(orderId);
           ref.read(restaurantOrderProvider.notifier).loadOrders();
           ref.read(restaurantTableProvider.notifier).loadTables();
+          ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
           onReloadMenu();
         } catch (_) {}
       }

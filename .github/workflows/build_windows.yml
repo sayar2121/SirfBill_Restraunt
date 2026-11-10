@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.33
+      RELEASE_TAG: v1.0.34
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [SSL FIX] Added SSL bypass (badCertificateCallback) to ApiClient — fixes CERTIFICATE_VERIFY_FAILED / HandshakeException on PCs with outdated root certificates\n• [SSL FIX] Added curl.exe -k fallback for version check — update detection now works even without valid SSL chain\n• [CRASH FIX] Fixed No Overlay widget found errors from HUD zoom buttons",
+            "release_notes": "• [TABLE WORKFLOW FIX] Running items / add item to served table order now seamlessly updates and dispatches new items to kitchen\n• [KDS RUNNING ORDER] Added resetTicketForNewItems — table remains occupied and kitchen display rings for new running items\n• [KOT / HOLD DISPATCH] Both Hold and KOT buttons now support appending items to existing active table orders",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

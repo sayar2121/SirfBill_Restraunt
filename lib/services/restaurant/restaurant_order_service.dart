@@ -105,10 +105,26 @@ class RestaurantOrderService {
       };
 
       debugPrint('PATCH /api/restaurant/orders/$orderId/items payload: $payload');
-      final res = await _dio.patch('/api/restaurant/orders/$orderId/items', data: payload);
+      Response res;
+      try {
+        res = await _dio.patch('/api/restaurant/orders/$orderId/items', data: payload);
+      } catch (patchErr) {
+        // If PATCH failed (e.g. 409 conflict, version mismatch, or not allowed when SERVED),
+        // try POST /api/restaurant/orders/$orderId/items as fallback
+        debugPrint('PATCH items error ($patchErr), attempting fallback POST /api/restaurant/orders/$orderId/items...');
+        res = await _dio.post('/api/restaurant/orders/$orderId/items', data: payload);
+      }
+
       if (res.statusCode == 200 || res.statusCode == 201) {
         try {
           await _dio.post('/api/restaurant/orders/$orderId/send-to-kitchen');
+        } catch (_) {}
+        // Also ensure order status transitions back to OPEN/SENT_TO_KITCHEN so kitchen displays the running ticket
+        try {
+          await _dio.post('/api/restaurant/orders/$orderId/transitions',
+            queryParameters: {'payload': 'SENT_TO_KITCHEN'},
+            data: {'target_status': 'SENT_TO_KITCHEN', 'status': 'SENT_TO_KITCHEN'},
+          );
         } catch (_) {}
         return (res.data is Map<String, dynamic>) ? res.data : <String, dynamic>{};
       }

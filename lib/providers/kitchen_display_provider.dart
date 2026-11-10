@@ -481,6 +481,17 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
     }).toList();
     state = state.copyWith(tickets: updated);
   }
+
+  /// Reset ticket status back to newOrder when running items are added to an existing/served order
+  void resetTicketForNewItems(String orderId) {
+    _ticketStatusMap.remove(orderId);
+    _prepStartTimeMap.remove(orderId);
+    // Unmark any prepared status for items belonging to this ticket
+    final keysToRemove = _preparedItemMap.keys.where((k) => k.startsWith('${orderId}_')).toList();
+    for (final k in keysToRemove) {
+      _preparedItemMap.remove(k);
+    }
+  }
 }
 
 final kitchenDisplayProvider =
