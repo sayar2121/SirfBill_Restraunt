@@ -175,6 +175,45 @@ class WindowsAutoUpdater {
       } catch (e) {
         debugPrint('[AutoUpdater] Backend app-version check skipped: $e');
       }
+
+      // 4. Last resort: curl.exe with -k (bypass SSL) to fetch GitHub manifest.json
+      //    Handles PCs with outdated/missing root CA certificates (CERTIFICATE_VERIFY_FAILED)
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final tempManifest = '${tempDir.path}/sirfbill_manifest_check.json';
+        final curlResult = await Process.run('curl.exe', [
+          '-k', // bypass SSL certificate verification
+          '-s', // silent
+          '-L', // follow redirects
+          '--max-time', '10',
+          '-o', tempManifest,
+          'https://github.com/sayar2121/SirfBill_Restraunt/releases/latest/download/manifest.json',
+        ]);
+        if (curlResult.exitCode == 0) {
+          final f = File(tempManifest);
+          if (await f.exists() && await f.length() > 10) {
+            final raw = await f.readAsString();
+            try {
+              final mData = jsonDecode(raw) as Map<String, dynamic>;
+              final v = (mData['version'] ?? '').toString().trim();
+              final pkgUrl = (mData['package_url'] ?? '').toString();
+              final notes = (mData['release_notes'] ?? 'General improvements and bug fixes.').toString();
+              if (v.isNotEmpty && pkgUrl.isNotEmpty) {
+                final packageInfo = await PackageInfo.fromPlatform();
+                debugPrint('[AutoUpdater] curl.exe manifest check: current=${packageInfo.version}, latest=$v');
+                if (_isNewerVersion(packageInfo.version, v)) {
+                  return AppUpdateInfo(latestVersion: v, downloadUrl: pkgUrl, releaseNotes: notes);
+                }
+                return null;
+              }
+            } catch (parseErr) {
+              debugPrint('[AutoUpdater] curl.exe manifest parse error: $parseErr');
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('[AutoUpdater] curl.exe version check skipped: $e');
+      }
     } catch (e) {
       debugPrint('[AutoUpdater] Update check failed: $e');
     }

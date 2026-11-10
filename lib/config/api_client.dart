@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../router/app_router.dart' as import_router;
@@ -25,6 +28,21 @@ class ApiClient {
         },
       ),
     );
+
+    // Bypass SSL certificate verification on Windows/native platforms.
+    // Some restaurant PCs have missing/outdated root CA certificates
+    // (e.g. ISRG Root X1 for Let's Encrypt / GitHub), causing
+    // CERTIFICATE_VERIFY_FAILED / HandshakeException errors.
+    if (!kIsWeb) {
+      dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient();
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) => true;
+          return client;
+        },
+      );
+    }
 
     dio.interceptors.add(
       InterceptorsWrapper(

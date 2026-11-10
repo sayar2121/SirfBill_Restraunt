@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.32
+      RELEASE_TAG: v1.0.33
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [CRASH FIX] Fixed No Overlay widget found errors — removed tooltip from HUD zoom buttons that were above the Navigator in widget tree\n• [ZOOM CLICK FIX] FittedBox zoom: right panel buttons (Pay, KOT, Bill, Hold) now respond correctly at all zoom levels\n• [ZOOM] Ctrl+/-, Ctrl+Scroll, Ctrl+0 reset all work reliably",
+            "release_notes": "• [SSL FIX] Added SSL bypass (badCertificateCallback) to ApiClient — fixes CERTIFICATE_VERIFY_FAILED / HandshakeException on PCs with outdated root certificates\n• [SSL FIX] Added curl.exe -k fallback for version check — update detection now works even without valid SSL chain\n• [CRASH FIX] Fixed No Overlay widget found errors from HUD zoom buttons",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }
