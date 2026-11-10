@@ -57,35 +57,37 @@ class PosTableSelector extends StatelessWidget {
         children: [
           // Header: "Table Selection", Floor dropdown, "View Floor Plan"
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.table_restaurant_rounded, size: 20, color: Color(0xFF10B981)),
-                  SizedBox(width: 8),
+                  Icon(Icons.table_restaurant_rounded, size: 18, color: Color(0xFF10B981)),
+                  SizedBox(width: 6),
                   Text(
-                    'Table Selection',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+                    'Tables',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
                   ),
                 ],
               ),
+              const Spacer(),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (hasRealFloors) ...[
                     Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                         border: Border.all(color: borderColor, width: 1.2),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: effectiveFloor,
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white : const Color(0xFF1E293B),
                           ),
@@ -96,7 +98,7 @@ class PosTableSelector extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                   ],
                   if (onRefresh != null) ...[
                     Tooltip(
@@ -105,32 +107,47 @@ class PosTableSelector extends StatelessWidget {
                         onTap: onRefresh,
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          width: 32,
+                          height: 32,
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: borderColor, width: 1.2),
                           ),
                           child: const Center(
-                            child: Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF10B981)),
+                            child: Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF10B981)),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                   ],
-                  TextButton.icon(
-                    onPressed: () => context.go('/counter/tables'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      minimumSize: const Size(0, 36),
-                      backgroundColor: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  Tooltip(
+                    message: 'View Floor Plan',
+                    child: InkWell(
+                      onTap: () => context.go('/counter/tables'),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.2)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.grid_view_rounded, size: 15, color: Color(0xFF3B82F6)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Floor',
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    icon: const Icon(Icons.grid_view_rounded, size: 16, color: Color(0xFF3B82F6)),
-                    label: const Text('Floor Plan', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
                   ),
                 ],
               ),

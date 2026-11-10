@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.37
+      RELEASE_TAG: v1.0.38
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [LIVE MOVING TIMER] Added moving live timer with HH:MM:SS ticking every second on table chips (T1, T2, etc.)\n• [KDS TIMER] Kitchen display SLA timer now updates in HH:MM:SS format\n• [OCCUPIED SINCE] Exact occupancy start time tracked dynamically across table selector and table overview",
+            "release_notes": "• [RENDERFLEX FIX] Completely resolved RenderFlex overflow by 150px on bottom and 62px on right\n• [RESPONSIVE TABLE HEADER] Compact Tables row with Floor icon and responsive dropdown\n• [LIVE HH:MM:SS TIMER] Moving live timer ticking every second on table chips\n• [KDS RUNNING ORDERS] Preserves served items as DONE and highlights NEW ADDED running items",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

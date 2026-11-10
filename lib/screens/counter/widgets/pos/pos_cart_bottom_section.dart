@@ -7,6 +7,7 @@ import 'pos_bottom_action_bar.dart';
 /// Reusable checkout bottom section for notes, calculations, and actions
 class PosCartBottomSection extends StatelessWidget {
   final RestaurantPosState posState;
+  final bool isCompact;
   final ValueChanged<String> onNotesChanged;
   final VoidCallback onAddDiscount;
   final VoidCallback onSaveHold;
@@ -17,6 +18,7 @@ class PosCartBottomSection extends StatelessWidget {
   const PosCartBottomSection({
     super.key,
     required this.posState,
+    this.isCompact = false,
     required this.onNotesChanged,
     required this.onAddDiscount,
     required this.onSaveHold,
@@ -32,7 +34,7 @@ class PosCartBottomSection extends StatelessWidget {
     final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      padding: EdgeInsets.fromLTRB(12, isCompact ? 4 : 8, 12, isCompact ? 6 : 10),
       decoration: BoxDecoration(
         color: bg,
         border: Border(top: BorderSide(color: borderColor)),

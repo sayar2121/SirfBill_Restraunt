@@ -379,8 +379,8 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
               builder: (context, constraints) {
                 final totalWidth = constraints.maxWidth;
                 final double cartWidth = totalWidth < 880
-                    ? (totalWidth * 0.44).clamp(300.0, 360.0)
-                    : (totalWidth < 1200 ? 380.0 : 440.0);
+                    ? (totalWidth * 0.44).clamp(340.0, 380.0)
+                    : (totalWidth < 1200 ? 410.0 : 450.0);
 
                 return Row(
                   children: [

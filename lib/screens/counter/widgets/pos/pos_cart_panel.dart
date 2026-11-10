@@ -63,30 +63,36 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
         color: rightPaneBg,
         border: widget.isMobile ? null : Border(left: BorderSide(color: borderColor)),
       ),
-      child: Column(
-        children: [
-          // 1. Fixed Header Section (Table Selector + Customer Bar + Active Order Banner + Clear Cart)
-          PosCartHeaderSection(
-            posState: posState,
-            liveTables: widget.liveTables,
-            customersList: customersList,
-            onSelectFloor: posNotifier.selectFloor,
-            onSelectTable: (tableId) => widget.onSelectTable(tableId, posNotifier),
-            onRefreshTables: widget.onRefreshTables,
-            onSelectCustomer: (cust) {
-              final name = cust['name']?.toString() ?? '';
-              final phone = cust['phone']?.toString() ?? '';
-              posNotifier.setCustomer(name, phone);
-            },
-            onClearCustomer: () => posNotifier.setCustomer('', ''),
-            onAddNewCustomer: () => PosBillingDialogs.showAddCustomerDialog(context, posNotifier),
-            onClearCart: () => PosOrderActionController.handleClearCart(
-              context: context,
-              ref: ref,
-              posNotifier: posNotifier,
-              posState: posState,
-            ),
-          ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompactHeight = constraints.maxHeight < 680;
+          return Column(
+            children: [
+              // 1. Header Section (wrapped in SingleChildScrollView to guarantee zero overflow)
+              SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: PosCartHeaderSection(
+                  posState: posState,
+                  liveTables: widget.liveTables,
+                  customersList: customersList,
+                  onSelectFloor: posNotifier.selectFloor,
+                  onSelectTable: (tableId) => widget.onSelectTable(tableId, posNotifier),
+                  onRefreshTables: widget.onRefreshTables,
+                  onSelectCustomer: (cust) {
+                    final name = cust['name']?.toString() ?? '';
+                    final phone = cust['phone']?.toString() ?? '';
+                    posNotifier.setCustomer(name, phone);
+                  },
+                  onClearCustomer: () => posNotifier.setCustomer('', ''),
+                  onAddNewCustomer: () => PosBillingDialogs.showAddCustomerDialog(context, posNotifier),
+                  onClearCart: () => PosOrderActionController.handleClearCart(
+                    context: context,
+                    ref: ref,
+                    posNotifier: posNotifier,
+                    posState: posState,
+                  ),
+                ),
+              ),
 
           // 2. Scrollable Middle Cart Items Section
           Expanded(
@@ -122,9 +128,10 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
             ),
           ),
 
-          // 3. Fixed Bottom Section (Notes + Bill Summary + Checkout Action Buttons)
+          // 3. Bottom Section (Notes + Bill Summary + Checkout Action Buttons)
           PosCartBottomSection(
             posState: posState,
+            isCompact: isCompactHeight,
             onNotesChanged: posNotifier.setOrderNotes,
             onAddDiscount: () => PosBillingDialogs.showDiscountDialog(context, posNotifier),
             onSaveHold: () => PosOrderActionController.handleSaveHold(
@@ -163,7 +170,9 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
             ),
           ),
         ],
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
