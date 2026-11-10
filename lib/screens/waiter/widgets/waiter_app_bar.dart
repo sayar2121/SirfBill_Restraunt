@@ -198,45 +198,6 @@ class WaiterAppBar extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(width: 8),
         ],
 
-        // Back to Dashboard / Modules
-        Tooltip(
-          message: 'Back to Modules',
-          child: InkWell(
-            onTap: () => context.go('/dashboard'),
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: borderColor),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.dashboard_rounded,
-                    size: 15,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
-                  if (screenWidth >= 650) ...[
-                    const SizedBox(width: 5),
-                    Text(
-                      'Modules',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
         // Refresh Menu & Tables
         Tooltip(
           message: 'Refresh Menu & Tables',
