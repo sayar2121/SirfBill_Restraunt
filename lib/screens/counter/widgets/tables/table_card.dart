@@ -251,13 +251,27 @@ class TableCard extends StatelessWidget {
                             children: [
                               const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFEF4444)),
                               const SizedBox(width: 3),
-                              Text(
-                                table.occupiedDuration ?? '00:00',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFEF4444),
-                                ),
+                              Builder(
+                                builder: (_) {
+                                  String duration = table.occupiedDuration ?? '00:00:00';
+                                  if (table.occupiedSince != null) {
+                                    final diff = DateTime.now().difference(table.occupiedSince!);
+                                    final h = diff.inHours.toString().padLeft(2, '0');
+                                    final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+                                    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+                                    duration = '$h:$m:$s';
+                                  } else if (duration.split(':').length == 2) {
+                                    duration = '$duration:00';
+                                  }
+                                  return Text(
+                                    duration,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFEF4444),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),

@@ -16,6 +16,7 @@ class DiningTable {
   final int capacity; // e.g. 4 Seater
   final TableStatus status;
   final String? occupiedDuration; // e.g. "00:45"
+  final DateTime? occupiedSince; // Exact timestamp when table became occupied
   final String floor; // e.g. "Floor 1"
   final double currentBillAmount;
   final int activeOrderCount;
@@ -26,6 +27,7 @@ class DiningTable {
     required this.capacity,
     required this.status,
     this.occupiedDuration,
+    this.occupiedSince,
     required this.floor,
     this.currentBillAmount = 0.0,
     this.activeOrderCount = 0,
@@ -37,6 +39,7 @@ class DiningTable {
     int? capacity,
     TableStatus? status,
     String? occupiedDuration,
+    DateTime? occupiedSince,
     String? floor,
     double? currentBillAmount,
     int? activeOrderCount,
@@ -47,6 +50,7 @@ class DiningTable {
       capacity: capacity ?? this.capacity,
       status: status ?? this.status,
       occupiedDuration: occupiedDuration ?? this.occupiedDuration,
+      occupiedSince: occupiedSince ?? this.occupiedSince,
       floor: floor ?? this.floor,
       currentBillAmount: currentBillAmount ?? this.currentBillAmount,
       activeOrderCount: activeOrderCount ?? this.activeOrderCount,

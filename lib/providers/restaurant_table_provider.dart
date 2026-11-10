@@ -168,7 +168,8 @@ class RestaurantTableNotifier extends Notifier<RestaurantTableState> {
       if (table.id == tableId) {
         return table.copyWith(
           status: status,
-          occupiedDuration: status == TableStatus.occupied ? '00:01' : null,
+          occupiedDuration: status == TableStatus.occupied ? '00:00:01' : null,
+          occupiedSince: status == TableStatus.occupied ? DateTime.now() : null,
           currentBillAmount: status == TableStatus.available ? 0.0 : table.currentBillAmount,
           activeOrderCount: status == TableStatus.available ? 0 : table.activeOrderCount,
         );

@@ -188,10 +188,16 @@ class KitchenTimerBadge extends StatelessWidget {
     // If order is still 'newOrder' (not accepted yet), show queued time or 'Waiting'
     final isQueued = status == KotStatus.newOrder;
     final timerBase = (prepStartedAt != null) ? prepStartedAt! : createdAt;
-    final elapsedMins = DateTime.now().difference(timerBase).inMinutes;
+    final diff = DateTime.now().difference(timerBase);
+    final elapsedMins = diff.inMinutes;
 
     final isUrgent = elapsedMins >= 15 && status != KotStatus.served;
     final isWarning = elapsedMins >= 10 && elapsedMins < 15 && status != KotStatus.served;
+
+    final h = diff.inHours.toString().padLeft(2, '0');
+    final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    final hhmmss = '$h:$m:$s';
 
     final Color badgeBg = isUrgent
         ? const Color(0xFFEF4444)
@@ -223,11 +229,7 @@ class KitchenTimerBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            isQueued
-                ? 'Queue: ${elapsedMins}m'
-                : (elapsedMins < 60
-                    ? '${elapsedMins}m'
-                    : '${elapsedMins ~/ 60}h ${elapsedMins % 60}m'),
+            isQueued ? 'Queue: $hhmmss' : hhmmss,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w900,

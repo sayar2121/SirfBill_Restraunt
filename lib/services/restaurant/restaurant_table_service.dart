@@ -92,6 +92,7 @@ class RestaurantTableService {
               : (json['active_order_count'] ?? (status == TableStatus.occupied ? 1 : 0));
 
           String? durationStr;
+          DateTime? orderStartTime;
           final orderCreatedAtStr = unsettledOrder != null
               ? (unsettledOrder['created_at'] ?? unsettledOrder['order_time'])
               : (json['active_order_created_at'] ?? json['occupied_since']);
@@ -101,21 +102,19 @@ class RestaurantTableService {
               final isoUtc = (rawStr.endsWith('Z') || rawStr.contains('+'))
                   ? rawStr
                   : '${rawStr}Z';
-              final orderTime = DateTime.parse(isoUtc).toLocal();
-              final diff = DateTime.now().difference(orderTime);
-              final totalSeconds = diff.inSeconds;
-              if (totalSeconds < 60) {
-                durationStr = '00:01';
-              } else {
-                final hours = diff.inHours.toString().padLeft(2, '0');
-                final mins = (diff.inMinutes % 60).toString().padLeft(2, '0');
-                durationStr = '$hours:$mins';
-              }
+              orderStartTime = DateTime.parse(isoUtc).toLocal();
+              final diff = DateTime.now().difference(orderStartTime);
+              final hours = diff.inHours.toString().padLeft(2, '0');
+              final mins = (diff.inMinutes % 60).toString().padLeft(2, '0');
+              final secs = (diff.inSeconds % 60).toString().padLeft(2, '0');
+              durationStr = '$hours:$mins:$secs';
             } catch (_) {
-              durationStr = '00:01';
+              orderStartTime = DateTime.now();
+              durationStr = '00:00:01';
             }
           } else if (status == TableStatus.occupied) {
-            durationStr = '00:01';
+            orderStartTime = DateTime.now();
+            durationStr = '00:00:01';
           }
 
           return DiningTable(
@@ -125,6 +124,7 @@ class RestaurantTableService {
             status: status,
             floor: json['floor'] ?? json['section'] ?? 'Floor 1',
             occupiedDuration: durationStr,
+            occupiedSince: orderStartTime,
             currentBillAmount: currentBill,
             activeOrderCount: activeOrderCount is int ? activeOrderCount : int.tryParse(activeOrderCount.toString()) ?? (status == TableStatus.occupied ? 1 : 0),
           );

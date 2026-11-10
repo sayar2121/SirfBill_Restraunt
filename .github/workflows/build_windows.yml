@@ -13,7 +13,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      RELEASE_TAG: v1.0.36
+      RELEASE_TAG: v1.0.37
 
     steps:
       - name: Checkout Code
@@ -128,7 +128,7 @@ jobs:
             "channel": "stable",
             "version": "$cleanVersion",
             "mandatory": false,
-            "release_notes": "• [KDS RUNNING ITEMS CLARITY] Previously prepared/served items remain marked as SERVED / DONE with checkmark\n• [NEW ADDED HIGHLIGHT] Only newly added running items appear unchecked with an amber NEW ADDED badge\n• [409 CONFLICT RESOLUTION] Auto-fetches latest server version and retries seamlessly",
+            "release_notes": "• [LIVE MOVING TIMER] Added moving live timer with HH:MM:SS ticking every second on table chips (T1, T2, etc.)\n• [KDS TIMER] Kitchen display SLA timer now updates in HH:MM:SS format\n• [OCCUPIED SINCE] Exact occupancy start time tracked dynamically across table selector and table overview",
             "package_url": "https://github.com/${{ github.repository }}/releases/download/$tagName/app-update.zip",
             "sha256": "$env:SHA256"
           }

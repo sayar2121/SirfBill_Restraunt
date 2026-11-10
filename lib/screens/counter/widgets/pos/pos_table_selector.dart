@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../models/restaurant_pos_models.dart';
@@ -170,7 +171,7 @@ class PosTableSelector extends StatelessWidget {
                         onTap: () => onSelectTable(table.id),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 160),
-                          width: 88,
+                          width: 96,
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                           decoration: BoxDecoration(
                             color: isSelected
@@ -235,23 +236,10 @@ class PosTableSelector extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
-                              if (isOccupied && table.occupiedDuration != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    table.occupiedDuration!,
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: isSelected ? Colors.white : const Color(0xFFEF4444),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                              if (isOccupied)
+                                TableLiveDurationBadge(
+                                  table: table,
+                                  isSelected: isSelected,
                                 )
                               else
                                 Text(
@@ -278,6 +266,76 @@ class PosTableSelector extends StatelessWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Dedicated widget that ticks every second to display live moving HH:MM:SS
+class TableLiveDurationBadge extends StatefulWidget {
+  final DiningTable table;
+  final bool isSelected;
+
+  const TableLiveDurationBadge({
+    super.key,
+    required this.table,
+    required this.isSelected,
+  });
+
+  @override
+  State<TableLiveDurationBadge> createState() => _TableLiveDurationBadgeState();
+}
+
+class _TableLiveDurationBadgeState extends State<TableLiveDurationBadge> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  String _formatDuration() {
+    if (widget.table.occupiedSince != null) {
+      final diff = DateTime.now().difference(widget.table.occupiedSince!);
+      final h = diff.inHours.toString().padLeft(2, '0');
+      final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+      final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+      return '$h:$m:$s';
+    }
+    final raw = widget.table.occupiedDuration ?? '00:00:00';
+    if (raw.split(':').length == 2) {
+      return '$raw:00';
+    }
+    return raw;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: widget.isSelected ? Colors.white24 : const Color(0xFFEF4444).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        _formatDuration(),
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: widget.isSelected ? Colors.white : const Color(0xFFEF4444),
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
