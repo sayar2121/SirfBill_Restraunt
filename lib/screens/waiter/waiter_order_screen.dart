@@ -459,11 +459,15 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
         }
 
         // Append new running items to existing active order on backend
-        await RestaurantPosService.appendItemsToOrder(
+        final updateRes = await RestaurantPosService.appendItemsToOrder(
           orderId: _activeOrderId!,
           newItems: deltaItems,
           expectedVersion: _activeOrderVersion ?? 1,
         );
+
+        if (updateRes == null) {
+          throw Exception('Backend could not update existing order. Please refresh and try again.');
+        }
 
         final orderNum = _activeOrderNumber ?? 'ORD';
         final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
