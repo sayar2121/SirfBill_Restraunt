@@ -5,10 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/restaurant_pos_models.dart';
-import '../../providers/counter_providers.dart';
 import '../../providers/kitchen_display_provider.dart';
 import '../../providers/restaurant_order_provider.dart';
-import '../../providers/restaurant_pos_provider.dart';
 import '../../providers/restaurant_table_provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/restaurant_pos_service.dart';
@@ -454,7 +452,7 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
                                       final item = filteredItems[idx];
                                       return PosMenuCard(
                                         item: item,
-                                        onTap: () => _addItem(item),
+                                        onAdd: () => _addItem(item),
                                       );
                                     },
                                   ),
