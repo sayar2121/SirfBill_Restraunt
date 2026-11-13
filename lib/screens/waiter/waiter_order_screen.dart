@@ -12,7 +12,6 @@ import '../../services/kitchen_audio_service.dart';
 import '../../services/restaurant_pos_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/shop_settings_service.dart';
-import '../../utils/kot_printer_helper.dart';
 import 'widgets/waiter_app_bar.dart';
 import 'widgets/waiter_table_strip.dart';
 import 'widgets/waiter_category_strip.dart';
@@ -41,7 +40,6 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
 
   // Real-time tracking of active orders on seated tables
   String? _activeOrderId;
-  String? _activeOrderNumber;
   int? _activeOrderVersion;
   List<PosCartItem> _initialCart = [];
 
@@ -165,7 +163,6 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     setState(() {
       _selectedTableId = table.id;
       _activeOrderId = null;
-      _activeOrderNumber = null;
       _activeOrderVersion = 1;
       _initialCart = [];
       _cart.clear();
@@ -299,7 +296,6 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     if (loadedItems.isNotEmpty && mounted) {
       setState(() {
         _activeOrderId = resolvedOrderId;
-        _activeOrderNumber = resolvedOrderNumber;
         _activeOrderVersion = resolvedVersion;
         _cart.clear();
         _cart.addAll(loadedItems);
@@ -422,7 +418,6 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final tables = ref.read(restaurantTableProvider).tables;
     final matchedTable = tables.where((t) => t.id == _selectedTableId).firstOrNull;
     final tableLabel = matchedTable?.label ?? 'Table $_selectedTableId';
-    final floor = matchedTable?.floor ?? '1st Floor';
     final notes = _notesController.text.trim();
 
     final prefs = await SharedPreferences.getInstance();
@@ -478,30 +473,12 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
           );
         } catch (_) {}
 
-        final orderNum = _activeOrderNumber ?? 'ORD';
-        final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
-
         // Update KDS live status (already prepared items stay SERVED/DONE, delta items get NEW ADDED)
         ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
           orderId: _activeOrderId!,
           existingPreparedItemIds: _initialCart.map((e) => e.item.id).toList(),
           newlyAddedItemIds: deltaItems.map((d) => d.item.id).toList(),
         );
-
-        // Thermal print KOT for newly added running items
-        if (mounted) {
-          KotPrinterHelper.printKotDirectly(
-            context: context,
-            kotNumber: kotNum,
-            orderNumber: orderNum,
-            orderType: 'Dine-in Running Items (Waiter)',
-            tableLabel: tableLabel,
-            floor: floor,
-            customerName: 'Waiter: $_waiterName',
-            orderNotes: notes,
-            items: deltaItems,
-          );
-        }
       } else {
         // 2. New Order on Empty Table -> Send full order to Kitchen & POS
         final res = await RestaurantPosService.sendToKitchen(
@@ -513,31 +490,12 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
           outletId: outletId,
         );
 
-        final orderNum = res?['order_number']?.toString() ??
-            '#ORD-${DateTime.now().millisecondsSinceEpoch % 10000}';
-        final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
-
         // Update KDS
         ref.read(kitchenDisplayProvider.notifier).markRunningItemsForOrder(
           orderId: res?['id']?.toString() ?? _selectedTableId!,
           existingPreparedItemIds: const [],
           newlyAddedItemIds: _cart.map((c) => c.item.id).toList(),
         );
-
-        // Print KOT
-        if (mounted) {
-          KotPrinterHelper.printKotDirectly(
-            context: context,
-            kotNumber: kotNum,
-            orderNumber: orderNum,
-            orderType: 'Dine-in (Waiter)',
-            tableLabel: tableLabel,
-            floor: floor,
-            customerName: 'Waiter: $_waiterName',
-            orderNotes: notes,
-            items: _cart,
-          );
-        }
       }
 
       // Synchronize live tables, orders and KDS tickets
@@ -550,7 +508,6 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
           _cart.clear();
           _initialCart.clear();
           _activeOrderId = null;
-          _activeOrderNumber = null;
           _notesController.clear();
           _selectedTableId = null;
           _mobileTabIndex = 0;
