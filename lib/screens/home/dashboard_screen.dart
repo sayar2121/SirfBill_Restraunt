@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/windows_auto_updater.dart';
 import '../../widgets/restaurant_module_card.dart';
-import '../../config/api_constants.dart';
+import 'widgets/dashboard_components.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -18,89 +17,15 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isCheckingUpdate = false;
 
-  Future<void> _showServerConfigDialog() async {
-    final controller = TextEditingController(text: ApiConstants.baseUrl);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.dns_rounded, color: Color(0xFF10B981)),
-            SizedBox(width: 8),
-            Text('Server IP & URL Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the local backend IP address or server URL running your restaurant database (e.g. http://192.168.0.31:8000 or http://127.0.0.1:8000):',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: controller,
-              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: 'http://192.168.0.31:8000',
-                prefixIcon: const Icon(Icons.link_rounded, size: 18),
-                filled: true,
-                fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () async {
-              await ApiConstants.setCustomBaseUrl(controller.text);
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Server URL updated to ${ApiConstants.baseUrl}'),
-                    backgroundColor: const Color(0xFF10B981),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save & Connect'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _manualCheckUpdate() async {
-    setState(() {
-      _isCheckingUpdate = true;
-    });
+    setState(() => _isCheckingUpdate = true);
     try {
       await WindowsAutoUpdater.checkAndShowUpdateIfAvailable(
         context,
         showFeedbackWhenLatest: true,
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isCheckingUpdate = false;
-        });
-      }
+      if (mounted) setState(() => _isCheckingUpdate = false);
     }
   }
 
@@ -171,9 +96,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       showDialog(
         context: context,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           backgroundColor: Colors.transparent,
           elevation: 0,
           child: Container(
@@ -186,11 +109,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.soup_kitchen_rounded,
-                  size: 48,
-                  color: module.primaryColor,
-                ),
+                Icon(Icons.soup_kitchen_rounded, size: 48, color: module.primaryColor),
                 const SizedBox(height: 24),
                 Text(
                   'Kitchen Display (KDS)',
@@ -215,9 +134,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     backgroundColor: module.primaryColor,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: const Text('Got it'),
                 ),
@@ -265,7 +182,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             : const Color(0xFFF1F8F5),
         body: SafeArea(
           child: CustomPaint(
-            painter: _DotGridPainter(
+            painter: DotGridPainter(
               color: isDark
                   ? Colors.white.withValues(alpha: 0.05)
                   : const Color(0xFFD1E8DE),
@@ -284,100 +201,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ? const NeverScrollableScrollPhysics()
                       : const ClampingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: screenHeight,
-                    ),
+                    constraints: BoxConstraints(minHeight: screenHeight),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Top Bar: Update button + Theme toggle
+                        // 1. Top Bar: Update button + Server config + Theme toggle
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: isWeb ? 48.0 : (isMobile ? 12.0 : 16.0),
                             vertical: isMobile ? 4.0 : (isTablet ? 6.0 : (isCompactHeight ? 6.0 : 12.0)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              if (!kIsWeb)
-                                isMobile
-                                    ? IconButton(
-                                        tooltip: 'Check Updates',
-                                        onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
-                                        icon: _isCheckingUpdate
-                                            ? SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                                ),
-                                              )
-                                            : Icon(
-                                                Icons.system_update_alt_rounded,
-                                                size: 19,
-                                                color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                              ),
-                                      )
-                                    : TextButton.icon(
-                                        onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
-                                        icon: _isCheckingUpdate
-                                            ? SizedBox(
-                                                width: 14,
-                                                height: 14,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                                ),
-                                              )
-                                            : Icon(
-                                                Icons.system_update_alt_rounded,
-                                                size: 16,
-                                                color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                              ),
-                                        label: Text(
-                                          _isCheckingUpdate ? 'Checking...' : 'Check Updates',
-                                          style: TextStyle(
-                                            color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        style: TextButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                        ),
-                                      ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                tooltip: 'Server Connection Settings',
-                                onPressed: _showServerConfigDialog,
-                                icon: Icon(
-                                  Icons.dns_rounded,
-                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                  size: isMobile ? 19 : 20,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              IconButton(
-                                onPressed: () => ref
-                                    .read(themeProvider.notifier)
-                                    .toggleTheme(),
-                                icon: Icon(
-                                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1E293B),
-                                  size: isMobile ? 20 : 22,
-                                ),
-                              ),
-                            ],
+                          child: DashboardTopBar(
+                            isDark: isDark,
+                            isMobile: isMobile,
+                            isCheckingUpdate: _isCheckingUpdate,
+                            onCheckUpdate: _manualCheckUpdate,
+                            onOpenServerSettings: () => ServerConfigDialog.show(context),
+                            onToggleTheme: () => ref.read(themeProvider.notifier).toggleTheme(),
                           ),
                         ),
 
-                        // Center Content
+                        // 2. Center Content: Logo, Welcome Title & 6-Module Grid
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: isWeb ? 36.0 : (isMobile ? 12.0 : 16.0),
@@ -387,105 +231,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // SirfBill Branded Logo
-                              Center(
-                                child: Image.asset(
-                                  isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
-                                  height: isMobile
-                                      ? 40
-                                      : (isTablet
-                                          ? (isCompactHeight ? 48 : 58)
-                                          : (isCompactHeight ? 60 : (isWeb ? 100 : 80))),
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) => Column(
-                                    children: [
-                                      Icon(
-                                        Icons.restaurant_rounded,
-                                        color: const Color(0xFF10B981),
-                                        size: isMobile ? 32 : (isTablet ? 36 : 42),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'sirfbill',
-                                        style: TextStyle(
-                                          fontSize: isMobile ? 18 : (isTablet ? 20 : 24),
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : const Color(0xFF1E293B),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(height: isMobile ? 6 : (isTablet ? (isCompactHeight ? 8 : 12) : (isCompactHeight ? 16 : 24))),
-
-                              // Welcome Badge (desktop / tablet)
-                              if (!isMobile) ...[
-                                Center(
-                                  child: Text(
-                                    'WELCOME BACK!',
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 10 : 11,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 2.0,
-                                      color: isDark
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                              ],
-
-                              // "Select a Module" Header
-                              Center(
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: TextStyle(
-                                      fontSize: isWeb ? 32 : (isMobile ? 20 : (isTablet ? 22 : 24)),
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark
-                                          ? Colors.white
-                                          : const Color(0xFF0F172A),
-                                      letterSpacing: -0.5,
-                                    ),
-                                    children: const [
-                                      TextSpan(text: 'Select a '),
-                                      TextSpan(
-                                        text: 'Module',
-                                        style: TextStyle(
-                                          color: Color(0xFF10B981),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              // Subtitle
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                  child: Text(
-                                    isMobile
-                                        ? 'Tap a module to continue and manage orders.'
-                                        : 'Choose a module to continue and manage your restaurant.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: isWeb ? 14 : (isMobile ? 11.5 : (isTablet ? 12 : 12.5)),
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ),
+                              DashboardHeader(
+                                isDark: isDark,
+                                isMobile: isMobile,
+                                isTablet: isTablet,
+                                isWeb: isWeb,
+                                isCompactHeight: isCompactHeight,
                               ),
                               SizedBox(height: isMobile ? 10 : (isTablet ? (isCompactHeight ? 12 : 18) : (isCompactHeight ? 24 : 36))),
 
-                              // Responsive Cards Layout: 6 Cards in 1 Row on Desktop, 3x2 on Tablet, 2x3 Grid on Mobile
+                              // Responsive Cards Grid: 6 Cards in 1 Row on Desktop, 3x2 on Tablet, 2x3 on Mobile
                               Center(
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 1560),
@@ -500,7 +255,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         crossAxisCount = 6;
                                         childAspectRatio = isCompactHeight ? 0.90 : 0.78;
                                       } else if (width >= 580) {
-                                        // Tablet (portrait or compact landscape): 3 columns x 2 rows
                                         crossAxisCount = 3;
                                         final availableGridHeight = screenHeight - (isCompactHeight ? 200 : 250);
                                         final rowHeight = (availableGridHeight - 14) / 2;
@@ -508,7 +262,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         final calculatedRatio = (colWidth / rowHeight.clamp(160.0, 240.0));
                                         childAspectRatio = calculatedRatio.clamp(1.0, 1.25);
                                       } else {
-                                        // Mobile (< 580px): 2 columns, 3 rows - all 6 modules on 1 screen!
                                         crossAxisCount = 2;
                                         final availableGridHeight = screenHeight - (isMobile ? 165 : 200);
                                         final rowHeight = (availableGridHeight - 16) / 3;
@@ -544,42 +297,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
 
-                        // Footer
+                        // 3. Footer Branding
                         Container(
                           padding: EdgeInsets.symmetric(
                             vertical: isMobile ? 8 : (isTablet ? (isCompactHeight ? 8 : 12) : (isCompactHeight ? 16 : 24)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: isMobile ? 20 : 32,
-                                height: 1,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.15)
-                                    : const Color(0xFFCBD5E1),
-                              ),
-                              SizedBox(width: isMobile ? 8 : 12),
-                              Text(
-                                'SirfBill Restaurant • Naiyo24',
-                                style: TextStyle(
-                                  color: isDark
-                                      ? const Color(0xFF64748B)
-                                      : const Color(0xFF94A3B8),
-                                  fontSize: isMobile ? 10.5 : 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                              SizedBox(width: isMobile ? 8 : 12),
-                              Container(
-                                width: isMobile ? 20 : 32,
-                                height: 1,
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.15)
-                                    : const Color(0xFFCBD5E1),
-                              ),
-                            ],
+                          child: DashboardFooter(
+                            isDark: isDark,
+                            isMobile: isMobile,
                           ),
                         ),
                       ],
@@ -592,32 +317,5 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
     );
-  }
-}
-
-class _DotGridPainter extends CustomPainter {
-  final Color color;
-
-  _DotGridPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    const double spacing = 22.0;
-    const double radius = 1.0;
-
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DotGridPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
