@@ -211,24 +211,22 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           _updatedOrderIds.add(order.id);
           _ticketStatusMap[order.id] = KotStatus.newOrder;
           _prepStartTimeMap.remove(order.id);
-        } else if (order.status == OrderStatus.active &&
-            (_ticketStatusMap[order.id] == KotStatus.served || _ticketStatusMap[order.id] == KotStatus.ready)) {
-          // If backend transitioned back to SENT_TO_KITCHEN / OPEN, clear stale served status
-          _ticketStatusMap[order.id] = KotStatus.newOrder;
-          _prepStartTimeMap.remove(order.id);
         }
 
         // Map OrderStatus to KotStatus:
         // Prioritize real-time backend order state (READY, SERVED) across all devices!
         KotStatus kotStatus;
-        if (order.status == OrderStatus.ready) {
-          // Explicitly marked READY on backend (kitchen cooked it, ready for waiter to serve!)
-          kotStatus = KotStatus.ready;
-          _ticketStatusMap[order.id] = KotStatus.ready;
+        if (_ticketStatusMap[order.id] == KotStatus.served && !hasNewItems) {
+          // If already marked served on this client (or backend) and no new items added, stay SERVED!
+          kotStatus = KotStatus.served;
         } else if (order.status == OrderStatus.served && !hasNewItems) {
           // Explicitly marked SERVED on backend
           kotStatus = KotStatus.served;
           _ticketStatusMap[order.id] = KotStatus.served;
+        } else if (order.status == OrderStatus.ready) {
+          // Explicitly marked READY on backend (kitchen cooked it, ready for waiter to serve!)
+          kotStatus = KotStatus.ready;
+          _ticketStatusMap[order.id] = KotStatus.ready;
         } else if (_ticketStatusMap.containsKey(order.id)) {
           kotStatus = _ticketStatusMap[order.id]!;
         } else {

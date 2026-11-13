@@ -53,6 +53,7 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
   List<MenuCategory> _categories = [];
   Timer? _refreshTimer;
   final Set<String> _notifiedReadyTicketIds = {};
+  final Set<String> _servedTicketIds = {};
 
   // Cart managed locally or synced with POS provider for this table
   final List<PosCartItem> _cart = [];
@@ -716,6 +717,13 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
                                     ElevatedButton.icon(
                                       onPressed: () async {
                                         Navigator.pop(sheetCtx);
+                                        _servedTicketIds.add(ticket.id);
+                                        _notifiedReadyTicketIds.add(ticket.id);
+                                        KitchenAudioService.stop();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                        }
+                                        if (mounted) setState(() {});
                                         await ref.read(kitchenDisplayProvider.notifier).updateTicketStatus(
                                           ticket.id,
                                           KotStatus.served,
@@ -786,14 +794,30 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
 
     // Live kitchen ticket status for ready orders
     final kdsState = ref.watch(kitchenDisplayProvider);
-    final readyTickets = kdsState.tickets.where((t) => t.status == KotStatus.ready).toList();
+    final readyTickets = kdsState.tickets
+        .where((t) => t.status == KotStatus.ready && !_servedTicketIds.contains(t.id))
+        .toList();
     final readyTableLabels = readyTickets.map((t) => t.tableLabel?.trim()).whereType<String>().toSet();
 
-    // Clean up notified IDs if orders were served or cleared
-    _notifiedReadyTicketIds.removeWhere((id) => !readyTickets.any((t) => t.id == id));
+    // Clean up notified and served IDs ONLY when tickets disappear entirely from active tickets
+    final activeTicketIds = kdsState.tickets.map((t) => t.id).toSet();
+    _notifiedReadyTicketIds.removeWhere((id) => !activeTicketIds.contains(id));
+    _servedTicketIds.removeWhere((id) => !activeTicketIds.contains(id));
+
+    // If an existing order has new running items added that kitchen hasn't prepared yet,
+    // allow notification to fire again when those new items are cooked and marked ready!
+    for (final ticket in kdsState.tickets) {
+      final hasUnpreparedRunningItems = ticket.items.any((it) => it.isRunningItem && !it.isPrepared);
+      if (hasUnpreparedRunningItems) {
+        _servedTicketIds.remove(ticket.id);
+        _notifiedReadyTicketIds.remove(ticket.id);
+      }
+    }
 
     // Trigger audible chime and toast notification when an order is marked ready by the kitchen
-    final newlyReadyTickets = readyTickets.where((t) => !_notifiedReadyTicketIds.contains(t.id)).toList();
+    final newlyReadyTickets = readyTickets
+        .where((t) => !_notifiedReadyTicketIds.contains(t.id) && !_servedTicketIds.contains(t.id))
+        .toList();
     if (newlyReadyTickets.isNotEmpty) {
       for (final t in newlyReadyTickets) {
         _notifiedReadyTicketIds.add(t.id);

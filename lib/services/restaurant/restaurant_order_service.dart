@@ -268,22 +268,27 @@ class RestaurantOrderService {
 
           String rawStatus = (json['status'] ?? json['order_status'] ?? json['kitchen_status'] ?? json['kot_status'] ?? json['state'] ?? 'OPEN').toString().toUpperCase();
 
-          // Check if any attached kitchen tickets/kots are marked READY
-          if (json['kitchen_tickets'] is List) {
-            for (final kt in json['kitchen_tickets']) {
-              final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
-              if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
-                rawStatus = 'READY';
-                break;
+          // Check if any attached kitchen tickets/kots are marked READY (only if order is not already SERVED or COMPLETED)
+          final isAlreadyServedOrCompleted = rawStatus == 'SERVED' ||
+              rawStatus.contains('SETTLED') ||
+              rawStatus.contains('COMPLETE');
+          if (!isAlreadyServedOrCompleted) {
+            if (json['kitchen_tickets'] is List) {
+              for (final kt in json['kitchen_tickets']) {
+                final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
+                if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
+                  rawStatus = 'READY';
+                  break;
+                }
               }
             }
-          }
-          if (json['kots'] is List) {
-            for (final kt in json['kots']) {
-              final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
-              if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
-                rawStatus = 'READY';
-                break;
+            if (json['kots'] is List) {
+              for (final kt in json['kots']) {
+                final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
+                if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
+                  rawStatus = 'READY';
+                  break;
+                }
               }
             }
           }
