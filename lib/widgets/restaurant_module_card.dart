@@ -51,17 +51,17 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
         final cardHeight = constraints.maxHeight;
-        final isMobile = cardWidth < 210 || (cardHeight.isFinite && cardHeight < 190);
-        final isCompact = isMobile || cardWidth < 240;
+        final isMobile = cardWidth < 210 || (cardHeight.isFinite && cardHeight < 170);
+        final isCompact = isMobile || cardWidth < 280 || (cardHeight.isFinite && cardHeight < 245);
 
-        final double horizontalPadding = isMobile ? 12.0 : (isCompact ? 14.0 : 20.0);
-        final double topPadding = isMobile ? 12.0 : (isCompact ? 14.0 : 20.0);
-        final double bottomPadding = isMobile ? 10.0 : (isCompact ? 14.0 : 20.0);
-        final double iconBoxSize = isMobile ? 34.0 : (isCompact ? 40.0 : 48.0);
-        final double iconSize = isMobile ? 18.0 : (isCompact ? 22.0 : 26.0);
-        final double titleFontSize = isMobile ? 13.5 : (isCompact ? 15.5 : 18.0);
-        final double descFontSize = isMobile ? 10.5 : (isCompact ? 11.5 : 12.5);
-        final double cardRadius = isMobile ? 18.0 : 24.0;
+        final double horizontalPadding = isMobile ? 12.0 : (isCompact ? 14.0 : 18.0);
+        final double topPadding = isMobile ? 10.0 : (isCompact ? 12.0 : 16.0);
+        final double bottomPadding = isMobile ? 8.0 : (isCompact ? 10.0 : 14.0);
+        final double iconBoxSize = isMobile ? 32.0 : (isCompact ? 38.0 : 44.0);
+        final double iconSize = isMobile ? 18.0 : (isCompact ? 20.0 : 24.0);
+        final double titleFontSize = isMobile ? 13.0 : (isCompact ? 14.5 : 17.0);
+        final double descFontSize = isMobile ? 10.5 : (isCompact ? 11.0 : 12.0);
+        final double cardRadius = isMobile ? 16.0 : (isCompact ? 18.0 : 22.0);
 
         return MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -139,46 +139,40 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                               ),
                             ),
                           ),
-                          SizedBox(height: isMobile ? 8 : (isCompact ? 14 : 18)),
+                          SizedBox(height: isMobile ? 6 : (isCompact ? 8 : 12)),
 
-                          // Title (2-line container for unified alignment across cards)
-                          SizedBox(
-                            height: isMobile ? 34 : (isCompact ? 40 : 46),
+                          // Title
+                          Text(
+                            widget.data.title,
+                            maxLines: isCompact ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.w800,
+                              color: titleColor,
+                              height: 1.15,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          SizedBox(height: isMobile ? 2 : (isCompact ? 3 : 5)),
+
+                          // Description (Flexible so it never overflows)
+                          Expanded(
                             child: Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: Alignment.topLeft,
                               child: Text(
-                                widget.data.title,
-                                maxLines: 2,
+                                widget.data.description,
+                                maxLines: isMobile ? 1 : (isCompact ? 2 : 2),
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: titleFontSize,
-                                  fontWeight: FontWeight.w800,
-                                  color: titleColor,
-                                  height: 1.15,
-                                  letterSpacing: -0.2,
+                                  fontSize: descFontSize,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w500,
+                                  color: descColor,
                                 ),
                               ),
                             ),
                           ),
-                          SizedBox(height: isMobile ? 2 : 4),
-
-                          // Description
-                          SizedBox(
-                            height: isMobile ? 14 : (isCompact ? 34 : 40),
-                            child: Text(
-                              widget.data.description,
-                              maxLines: isMobile ? 1 : 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: descFontSize,
-                                height: 1.25,
-                                fontWeight: FontWeight.w500,
-                                color: descColor,
-                              ),
-                            ),
-                          ),
-
-                          const Spacer(),
 
                           // Bottom Right "Open ->" Pill Button (pinned to bottom right corner)
                           Align(
@@ -186,8 +180,8 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 10 : (isCompact ? 14 : 20),
-                                vertical: isMobile ? 5 : (isCompact ? 7 : 9),
+                                horizontal: isMobile ? 9 : (isCompact ? 12 : 16),
+                                vertical: isMobile ? 4 : (isCompact ? 5 : 7),
                               ),
                               decoration: BoxDecoration(
                                 color: primaryColor,
@@ -196,7 +190,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                   BoxShadow(
                                     color: primaryColor.withValues(alpha: _isHovered ? 0.45 : 0.28),
                                     blurRadius: _isHovered ? 14 : 8,
-                                    offset: const Offset(0, 4),
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
@@ -208,7 +202,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: isMobile ? 10.5 : (isCompact ? 11.5 : 13),
+                                      fontSize: isMobile ? 10.0 : (isCompact ? 11.0 : 12.0),
                                       letterSpacing: 0.2,
                                     ),
                                   ),
@@ -216,7 +210,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                   Icon(
                                     Icons.arrow_forward_rounded,
                                     color: Colors.white,
-                                    size: isMobile ? 11 : (isCompact ? 12 : 14),
+                                    size: isMobile ? 11 : (isCompact ? 12 : 13),
                                   ),
                                 ],
                               ),

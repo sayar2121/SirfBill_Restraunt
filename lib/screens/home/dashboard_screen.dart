@@ -502,11 +502,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       } else if (width >= 580) {
                                         // Tablet (portrait or compact landscape): 3 columns x 2 rows
                                         crossAxisCount = 3;
-                                        final availableGridHeight = screenHeight - (isCompactHeight ? 220 : 260);
+                                        final availableGridHeight = screenHeight - (isCompactHeight ? 200 : 250);
                                         final rowHeight = (availableGridHeight - 14) / 2;
                                         final colWidth = (width - 24) / 3;
-                                        final calculatedRatio = (colWidth / rowHeight.clamp(130.0, 185.0));
-                                        childAspectRatio = calculatedRatio.clamp(1.15, 1.45);
+                                        final calculatedRatio = (colWidth / rowHeight.clamp(160.0, 240.0));
+                                        childAspectRatio = calculatedRatio.clamp(1.0, 1.25);
                                       } else {
                                         // Mobile (< 580px): 2 columns, 3 rows - all 6 modules on 1 screen!
                                         crossAxisCount = 2;
