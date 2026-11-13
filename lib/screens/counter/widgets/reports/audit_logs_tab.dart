@@ -515,78 +515,78 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              // Search Input Box
-              Expanded(
-                child: Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (val) {
-                      setState(() => _searchQuery = val);
-                      widget.onSearch?.call(val);
-                    },
-                    style: TextStyle(fontSize: 13, color: textColor),
-                    decoration: InputDecoration(
-                      hintText: 'Search audit records by order #, cashier, or details...',
-                      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _searchQuery = '');
-                                widget.onSearch?.call('');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxWidth < 750;
+
+              final searchBox = Container(
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: borderColor),
+                ),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (val) {
+                    setState(() => _searchQuery = val);
+                    widget.onSearch?.call(val);
+                  },
+                  style: TextStyle(fontSize: 13, color: textColor),
+                  decoration: InputDecoration(
+                    hintText: 'Search audit records by order #, cashier, or details...',
+                    hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF94A3B8)),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 16),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                              widget.onSearch?.call('');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
+              );
 
-              // Actor Filter Dropdown
-              if (actors.length > 1)
-                Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedActor,
-                      dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
-                      icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF8B5CF6)),
-                      items: actors.map((a) {
-                        return DropdownMenuItem(
-                          value: a,
-                          child: Text(a == 'All' ? 'All Actors / Staff' : a),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedActor = val);
-                      },
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 12),
+              final actorDropdown = (actors.length > 1)
+                  ? Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedActor,
+                          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                          icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF8B5CF6)),
+                          isExpanded: isCompact,
+                          items: actors.map((a) {
+                            return DropdownMenuItem(
+                              value: a,
+                              child: Text(
+                                a == 'All' ? 'All Actors / Staff' : a,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedActor = val);
+                          },
+                        ),
+                      ),
+                    )
+                  : null;
 
-              // Sort Option Dropdown
-              Container(
+              final sortDropdown = Container(
                 height: 42,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
@@ -600,17 +600,48 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                     dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
                     icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF8B5CF6)),
+                    isExpanded: isCompact,
                     items: const [
-                      DropdownMenuItem(value: 'newest', child: Text('Sort: Newest First')),
-                      DropdownMenuItem(value: 'oldest', child: Text('Sort: Oldest First')),
+                      DropdownMenuItem(value: 'newest', child: Text('Sort: Newest First', overflow: TextOverflow.ellipsis)),
+                      DropdownMenuItem(value: 'oldest', child: Text('Sort: Oldest First', overflow: TextOverflow.ellipsis)),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => _sortBy = val);
                     },
                   ),
                 ),
-              ),
-            ],
+              );
+
+              if (isCompact) {
+                return Column(
+                  children: [
+                    searchBox,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (actorDropdown != null) ...[
+                          Expanded(child: actorDropdown),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(child: sortDropdown),
+                      ],
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: searchBox),
+                  if (actorDropdown != null) ...[
+                    const SizedBox(width: 12),
+                    actorDropdown,
+                  ],
+                  const SizedBox(width: 12),
+                  sortDropdown,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
 
@@ -871,26 +902,32 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                                   const SizedBox(width: 8),
 
                                   // Actor Name Pill
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.person_rounded, size: 10, color: subtextColor),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          log.actorName,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark ? Colors.grey[300] : const Color(0xFF475569),
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.person_rounded, size: 10, color: subtextColor),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              log.actorName,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                                color: isDark ? Colors.grey[300] : const Color(0xFF475569),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -910,9 +947,12 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                               const SizedBox(height: 6),
 
                               // Sub-badges (Payment Tender & Fulfillment)
-                              Row(
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
-                                  if (tenderBadge != null) ...[
+                                  if (tenderBadge != null)
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
@@ -928,9 +968,7 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  if (fulfillmentBadge != null) ...[
+                                  if (fulfillmentBadge != null)
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
@@ -946,8 +984,6 @@ class _AuditLogsTabState extends State<AuditLogsTab> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                  ],
                                   Text(
                                     dateFormatted,
                                     style: TextStyle(fontSize: 10, color: subtextColor),

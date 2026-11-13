@@ -120,7 +120,7 @@ class TableCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +128,7 @@ class TableCard extends StatelessWidget {
                         Text(
                           'Table ${table.label}',
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w800,
                             color: isDark ? Colors.white : const Color(0xFF0F172A),
                           ),
@@ -138,14 +138,18 @@ class TableCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.layers_rounded, size: 12, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                            Icon(Icons.layers_rounded, size: 11, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                             const SizedBox(width: 3),
-                            Text(
-                              table.floor.isNotEmpty ? table.floor : 'Main Floor',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            Expanded(
+                              child: Text(
+                                table.floor.isNotEmpty ? table.floor : 'Main Floor',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -153,8 +157,9 @@ class TableCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
                       color: statusBg,
                       borderRadius: BorderRadius.circular(20),
@@ -163,12 +168,12 @@ class TableCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(statusIcon, size: 12, color: statusColor),
-                        const SizedBox(width: 4),
+                        Icon(statusIcon, size: 11, color: statusColor),
+                        const SizedBox(width: 3.5),
                         Text(
                           statusText,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w700,
                             color: statusColor,
                           ),
@@ -177,7 +182,7 @@ class TableCard extends StatelessWidget {
                     ),
                   ),
                   if (onEdit != null) ...[
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 2),
                     IconButton(
                       onPressed: onEdit,
                       icon: const Icon(Icons.more_vert_rounded, size: 18),

@@ -41,106 +41,209 @@ class ReportFilterHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Title, Universal Unified Date Range Filter & Export Action
+          // Top Section: Title, Universal Unified Date Range Filter & Export Action
           LayoutBuilder(
             builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 750;
-              return Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+              final isDesktopWide = constraints.maxWidth >= 1150;
+
+              if (isDesktopWide) {
+                return Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 22),
                     ),
-                    child: const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reports & Executive Analytics',
+                            style: TextStyle(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                              letterSpacing: -0.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Real-time revenue, order channels, menu performance and audit trail',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Refresh Button
+                    IconButton(
+                      onPressed: isLoading ? null : onRefresh,
+                      tooltip: 'Refresh analytics',
+                      icon: isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                            )
+                          : const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(width: 6),
+
+                    // Universal Date Filter Widget
+                    CommonDateFilterBar(
+                      selectedPreset: datePreset,
+                      customRange: customRange,
+                      onSelectPreset: onSelectDatePreset,
+                      onSelectCustomRange: onSelectCustomRange,
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Export CTA Button (Excel / PDF)
+                    ElevatedButton.icon(
+                      onPressed: onExportPdf,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      icon: const Icon(Icons.file_download_outlined, size: 16),
+                      label: const Text(
+                        'Export Data',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              // On Tablet / Mobile: Responsive multi-row layout to prevent 441px overflow
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        'Reports & Executive Analytics',
-                        style: TextStyle(
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                          letterSpacing: -0.2,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.analytics_rounded, color: Color(0xFF10B981), size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reports & Executive Analytics',
+                              style: TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                                letterSpacing: -0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Real-time revenue, order channels, menu performance and audit trail',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Real-time revenue, order channels, menu performance and audit trail',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
+                      const SizedBox(width: 6),
+
+                      // Refresh Button
+                      IconButton(
+                        onPressed: isLoading ? null : onRefresh,
+                        tooltip: 'Refresh analytics',
+                        icon: isLoading
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                              )
+                            : const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(width: 4),
+
+                      // Export CTA Button
+                      ElevatedButton.icon(
+                        onPressed: onExportPdf,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.file_download_outlined, size: 15),
+                        label: const Text(
+                          'Export',
+                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 10),
 
-                  // Refresh Button
-                  IconButton(
-                    onPressed: isLoading ? null : onRefresh,
-                    tooltip: 'Refresh analytics',
-                    icon: isLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
-                          )
-                        : const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Universal Date Filter Widget (matching Orders, Tables, and Kitchen)
-                  CommonDateFilterBar(
-                    selectedPreset: datePreset,
-                    customRange: customRange,
-                    onSelectPreset: onSelectDatePreset,
-                    onSelectCustomRange: onSelectCustomRange,
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Export CTA Button (Excel / PDF)
-                  ElevatedButton.icon(
-                    onPressed: onExportPdf,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.file_download_outlined, size: 16),
-                    label: Text(
-                      isCompact ? 'Export' : 'Export Data',
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                  // Horizontally scrollable date range selector on tablet/compact
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: CommonDateFilterBar(
+                      selectedPreset: datePreset,
+                      customRange: customRange,
+                      onSelectPreset: onSelectDatePreset,
+                      onSelectCustomRange: onSelectCustomRange,
                     ),
                   ),
                 ],
               );
             },
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Clean Segmented Tabs (Overview, Item-wise Sales, Audit Trail)
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: borderColor, width: 0.8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSegmentTab(0, 'Overview & Financials', Icons.dashboard_rounded, activeTab == 0, isDark),
-                const SizedBox(width: 4),
-                _buildSegmentTab(1, 'Item-wise Sales', Icons.leaderboard_rounded, activeTab == 1, isDark),
-                const SizedBox(width: 4),
-                _buildSegmentTab(2, 'Audit Trail', Icons.security_rounded, activeTab == 2, isDark),
-              ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: borderColor, width: 0.8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSegmentTab(0, 'Overview & Financials', Icons.dashboard_rounded, activeTab == 0, isDark),
+                  const SizedBox(width: 4),
+                  _buildSegmentTab(1, 'Item-wise Sales', Icons.leaderboard_rounded, activeTab == 1, isDark),
+                  const SizedBox(width: 4),
+                  _buildSegmentTab(2, 'Audit Trail', Icons.security_rounded, activeTab == 2, isDark),
+                ],
+              ),
             ),
           ),
         ],
