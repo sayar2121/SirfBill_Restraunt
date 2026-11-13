@@ -385,6 +385,23 @@ class PdfThermalGenerator {
                 ),
                 textAlign: pw.TextAlign.center,
               ),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                'Sirfbill',
+                style: pw.TextStyle(
+                  fontSize: 8,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.Text(
+                'Powered By Naiyo24 Pvt. Ltd.',
+                style: const pw.TextStyle(
+                  fontSize: 7,
+                  color: PdfColors.grey700,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
             ],
           );
         },
