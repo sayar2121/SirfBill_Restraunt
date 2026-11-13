@@ -7,6 +7,7 @@ class PosBottomActionBar extends StatelessWidget {
   final VoidCallback onProceedToPayment;
   final String? activeOrderLabel;
   final double height;
+  final bool isPayEnabled;
 
   const PosBottomActionBar({
     super.key,
@@ -16,6 +17,7 @@ class PosBottomActionBar extends StatelessWidget {
     required this.onProceedToPayment,
     this.activeOrderLabel,
     this.height = 50,
+    this.isPayEnabled = true,
   });
 
   @override
@@ -25,6 +27,7 @@ class PosBottomActionBar extends StatelessWidget {
         final totalWidth = constraints.maxWidth;
         // On compact panes, adapt layout and text
         final isCompact = totalWidth < 430;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return Row(
           children: [
@@ -139,10 +142,24 @@ class PosBottomActionBar extends StatelessWidget {
               child: SizedBox(
                 height: height,
                 child: ElevatedButton(
-                  onPressed: onProceedToPayment,
+                  onPressed: isPayEnabled
+                      ? onProceedToPayment
+                      : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Cannot settle: Cart is empty or payable amount is ₹0.'),
+                              backgroundColor: Color(0xFFEF4444),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
+                    backgroundColor: isPayEnabled
+                        ? const Color(0xFF10B981)
+                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1)),
+                    foregroundColor: isPayEnabled
+                        ? Colors.white
+                        : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
                     padding: const EdgeInsets.symmetric(horizontal: 6),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
@@ -155,10 +172,22 @@ class PosBottomActionBar extends StatelessWidget {
                       children: [
                         Text(
                           isCompact ? 'Pay' : 'Settle & Pay',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isPayEnabled
+                                ? Colors.white
+                                : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.arrow_forward_rounded, size: 16),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: isPayEnabled
+                              ? Colors.white
+                              : (isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
                       ],
                     ),
                   ),

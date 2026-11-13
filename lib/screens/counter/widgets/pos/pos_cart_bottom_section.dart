@@ -82,6 +82,7 @@ class PosCartBottomSection extends StatelessWidget {
           PosBottomActionBar(
             activeOrderLabel: posState.activeOrderNumber,
             height: isCompact ? 42 : 50,
+            isPayEnabled: posState.cart.isNotEmpty && posState.grandTotal > 0,
             onSaveHold: onSaveHold,
             onPrintKot: onPrintKot,
             onPrintBill: onPrintBill,

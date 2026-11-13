@@ -47,6 +47,16 @@ class PosBillingDialogs {
     required List<DiningTable> tables,
     required VoidCallback onReloadMenu,
   }) {
+    if (state.cart.isEmpty || state.grandTotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot settle: Cart is empty or payable amount is ₹0.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => PosOrderPaymentDialog(

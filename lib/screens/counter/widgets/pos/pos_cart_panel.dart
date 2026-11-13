@@ -151,15 +151,26 @@ class _PosCartPanelState extends ConsumerState<PosCartPanel> {
               onReloadMenu: widget.onReloadMenu,
               onSelectTable: widget.onSelectTable,
             ),
-            onProceedToPayment: () => PosBillingDialogs.showPaymentDialog(
-              context: context,
-              ref: ref,
-              state: posState,
-              shopSettings: widget.shopSettings,
-              activeOutlet: widget.activeOutlet,
-              tables: widget.liveTables,
-              onReloadMenu: widget.onReloadMenu,
-            ),
+            onProceedToPayment: () {
+              if (posState.cart.isEmpty || posState.grandTotal <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cannot settle: Cart is empty or payable amount is ₹0.'),
+                    backgroundColor: Color(0xFFEF4444),
+                  ),
+                );
+                return;
+              }
+              PosBillingDialogs.showPaymentDialog(
+                context: context,
+                ref: ref,
+                state: posState,
+                shopSettings: widget.shopSettings,
+                activeOutlet: widget.activeOutlet,
+                tables: widget.liveTables,
+                onReloadMenu: widget.onReloadMenu,
+              );
+            },
           );
 
           if (isExtremeCompact) {

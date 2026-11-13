@@ -39,6 +39,15 @@ class _PosOrderPaymentDialogState extends ConsumerState<PosOrderPaymentDialog> {
   String _selectedMode = 'UPI / QR';
 
   void _onConfirmSettlement() {
+    if (widget.state.cart.isEmpty || widget.state.grandTotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot settle: Cart is empty or payable amount is ₹0.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
     final selectedMode = _selectedMode;
     // Pop the dialog FIRST so the dialog is removed from the tree.
     Navigator.pop(context);

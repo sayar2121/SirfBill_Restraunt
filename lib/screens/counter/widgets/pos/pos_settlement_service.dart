@@ -30,6 +30,17 @@ class PosSettlementService {
     required VoidCallback onReloadMenu,
   }) async {
     debugPrint('[Settlement] START — context.mounted=${context.mounted}');
+    if (state.cart.isEmpty || state.grandTotal <= 0) {
+      debugPrint('[Settlement] Aborted: Cart is empty or grand total is <= 0');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot settle order: Cart is empty or amount is ₹0.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Creating order & settling payment...')),
     );
