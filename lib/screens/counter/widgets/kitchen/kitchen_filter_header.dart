@@ -35,6 +35,8 @@ class KitchenFilterHeader extends StatelessWidget {
   final VoidCallback? onToggleSound;
   final bool isStandalone;
   final VoidCallback? onExitStandalone;
+  final String restaurantName;
+  final String? outletLocation;
 
   const KitchenFilterHeader({
     super.key,
@@ -65,6 +67,8 @@ class KitchenFilterHeader extends StatelessWidget {
     required this.onToggleSound,
     this.isStandalone = false,
     this.onExitStandalone,
+    this.restaurantName = '',
+    this.outletLocation,
   });
 
   @override
@@ -119,6 +123,8 @@ class KitchenFilterHeader extends StatelessWidget {
                                   isTablet: isTablet,
                                   isDark: isDark,
                                   borderColor: borderColor,
+                                  restaurantName: restaurantName,
+                                  outletLocation: outletLocation,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -155,6 +161,8 @@ class KitchenFilterHeader extends StatelessWidget {
                               isTablet: false,
                               isDark: isDark,
                               borderColor: borderColor,
+                              restaurantName: restaurantName,
+                              outletLocation: outletLocation,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -223,13 +231,15 @@ class KitchenFilterHeader extends StatelessWidget {
 }
 }
 
-/// Brand logo, title, and live pulse badge header
+/// Brand logo, title, restaurant outlet banner, and live pulse badge header
 class _KdsBrandHeader extends StatelessWidget {
   final bool isStandalone;
   final bool isMobile;
   final bool isTablet;
   final bool isDark;
   final Color borderColor;
+  final String restaurantName;
+  final String? outletLocation;
 
   const _KdsBrandHeader({
     required this.isStandalone,
@@ -237,10 +247,16 @@ class _KdsBrandHeader extends StatelessWidget {
     required this.isTablet,
     required this.isDark,
     required this.borderColor,
+    this.restaurantName = '',
+    this.outletLocation,
   });
 
   @override
   Widget build(BuildContext context) {
+    final displayName = restaurantName.trim().isNotEmpty
+        ? restaurantName.trim()
+        : 'SirfBill Restaurant';
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -280,19 +296,76 @@ class _KdsBrandHeader extends StatelessWidget {
                   const LivePulseBadge(label: 'LIVE KDS'),
                 ],
               ),
-              if (!isMobile) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'Real-time automated order queue • POS live-synced',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              const SizedBox(height: 3),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.storefront_rounded,
+                            size: 11,
+                            color: Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  if (!isMobile && outletLocation != null && outletLocation!.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '•  $outletLocation',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                  if (!isMobile && !isTablet) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '•  POS live-synced',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),

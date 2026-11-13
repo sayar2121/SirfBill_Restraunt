@@ -8,12 +8,14 @@ class NewOrderAlertModal extends StatelessWidget {
   final KitchenTicket ticket;
   final VoidCallback onAccept;
   final VoidCallback onDismiss;
+  final String? restaurantName;
 
   const NewOrderAlertModal({
     super.key,
     required this.ticket,
     required this.onAccept,
     required this.onDismiss,
+    this.restaurantName,
   });
 
   @override
@@ -79,11 +81,11 @@ class NewOrderAlertModal extends StatelessWidget {
                     child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        const Row(
                           children: [
                             Text(
                               'NEW ORDER INCOMING',
@@ -98,10 +100,14 @@ class NewOrderAlertModal extends StatelessWidget {
                             LivePulseBadge(label: 'LIVE', color: Colors.white),
                           ],
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Requires immediate kitchen preparation',
-                          style: TextStyle(fontSize: 11.5, color: Colors.white70, fontWeight: FontWeight.w500),
+                          restaurantName != null && restaurantName!.isNotEmpty
+                              ? 'Kitchen prep required • $restaurantName'
+                              : 'Requires immediate kitchen preparation',
+                          style: const TextStyle(fontSize: 11.5, color: Colors.white70, fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

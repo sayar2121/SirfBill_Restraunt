@@ -2,8 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/app_session_manager.dart';
+import '../../services/inventory_service.dart';
 import '../../services/kitchen_audio_service.dart';
+import '../../services/shop_service.dart';
+import '../../services/shop_settings_service.dart';
 import '../../providers/kitchen_display_provider.dart';
 import 'widgets/kitchen/kitchen_filter_header.dart';
 import 'widgets/kitchen/kitchen_ticket_card.dart';
@@ -23,10 +27,14 @@ class KitchenDisplayScreen extends ConsumerStatefulWidget {
 class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
   Timer? _liveClockTimer;
   String? _shownAlertTicketId;
+  String _restaurantName = '';
+  String? _outletLocation;
 
   @override
   void initState() {
     super.initState();
+    _loadRestaurantInfo();
+
     // In dedicated standalone KDS mode (/kitchen), sound alert is enabled for the kitchen tablet/monitor.
     // In POS counter billing tab, it remains completely muted.
     if (widget.isStandalone) {
@@ -41,6 +49,54 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
     _liveClockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Future<void> _loadRestaurantInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String restaurantName = prefs.getString('assigned_outlet_name') ?? '';
+      String location = '';
+
+      final currentShopId = prefs.getString('selected_shop_id') ??
+          prefs.getString('assigned_outlet_id') ??
+          await InventoryService.getShopId();
+
+      try {
+        final shops = await ShopService.getShops();
+        final matched = shops.where((s) => s.id == currentShopId).firstOrNull ?? shops.firstOrNull;
+        if (matched != null) {
+          if (restaurantName.isEmpty) {
+            restaurantName = matched.name;
+          }
+          location = matched.city.isNotEmpty
+              ? matched.city
+              : (matched.location.isNotEmpty ? matched.location : '');
+        }
+      } catch (_) {}
+
+      if (restaurantName.isEmpty) {
+        restaurantName = prefs.getString('shop_name') ?? '';
+      }
+      if (restaurantName.isEmpty) {
+        try {
+          final settings = await ShopSettingsService.getSettings();
+          final n = settings['shop_name']?.toString();
+          if (n != null && n.trim().isNotEmpty) {
+            restaurantName = n.trim();
+          }
+        } catch (_) {}
+      }
+      if (restaurantName.isEmpty) {
+        restaurantName = 'SirfBill Restaurant';
+      }
+
+      if (mounted) {
+        setState(() {
+          _restaurantName = restaurantName;
+          _outletLocation = location.isNotEmpty ? location : null;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -121,6 +177,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             barrierDismissible: false,
             builder: (ctx) => NewOrderAlertModal(
               ticket: alertTicket,
+              restaurantName: _restaurantName,
               onAccept: () {
                 Navigator.of(ctx).pop();
                 kdsNotifier.updateTicketStatus(alertTicket.id, KotStatus.preparing);
@@ -146,6 +203,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
           children: [
           // 1. Kitchen Filter Header (Matches POS Billing Control Style)
           KitchenFilterHeader(
+            restaurantName: _restaurantName,
+            outletLocation: _outletLocation,
             totalCount: kdsState.totalCount,
             activeCount: kdsState.activeCount,
             newCount: kdsState.newCount,
@@ -172,6 +231,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
             isStandalone: widget.isStandalone,
             onExitStandalone: _handleExitStandalone,
             onRefresh: () async {
+              _loadRestaurantInfo();
               await kdsNotifier.loadTickets();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -236,9 +296,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF64748B)),
                               ),
                               const SizedBox(height: 6),
-                              const Text(
-                                'Kitchen is all caught up! New POS orders will appear automatically.',
-                                style: TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                              Text(
+                                _restaurantName.trim().isNotEmpty
+                                    ? 'Kitchen is all caught up for $_restaurantName! New orders will appear automatically.'
+                                    : 'Kitchen is all caught up! New POS orders will appear automatically.',
+                                style: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
