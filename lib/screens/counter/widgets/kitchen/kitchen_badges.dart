@@ -210,7 +210,7 @@ class KitchenTimerBadge extends StatelessWidget {
         : (status == KotStatus.served ? const Color(0xFF64748B) : statusColor);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
       decoration: BoxDecoration(
         color: badgeBg,
         borderRadius: BorderRadius.circular(8),
@@ -224,12 +224,12 @@ class KitchenTimerBadge extends StatelessWidget {
         children: [
           Icon(
             isUrgent ? Icons.warning_rounded : (isQueued ? Icons.schedule_rounded : Icons.timer_outlined),
-            size: 12,
+            size: 11,
             color: textColor,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3.5),
           Text(
-            isQueued ? 'Queue: $hhmmss' : hhmmss,
+            hhmmss,
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w900,

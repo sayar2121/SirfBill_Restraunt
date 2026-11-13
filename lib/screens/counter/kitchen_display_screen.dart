@@ -320,7 +320,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                             childAspectRatio = 1.05;
                           } else if (isTablet) {
                             crossAxisCount = 2;
-                            childAspectRatio = 0.84;
+                            childAspectRatio = 0.80;
                           } else if (width < 1250) {
                             crossAxisCount = 3;
                             childAspectRatio = 0.82;

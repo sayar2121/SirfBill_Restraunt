@@ -94,7 +94,7 @@ class KitchenTicketCard extends StatelessWidget {
         children: [
           // 1. Header: KOT Number + Live Elapsed Timer + Print
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
@@ -115,54 +115,33 @@ class KitchenTicketCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
                               ticket.kotNumber,
                               style: TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w900,
                                 color: statusColor,
                                 letterSpacing: 0.2,
                               ),
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           KitchenStatusBadge(status: ticket.status, color: statusColor),
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              ticket.orderNumber,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                fontWeight: FontWeight.w700,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text('•', style: TextStyle(fontSize: 10, color: borderColor)),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 11,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            DateFormat('hh:mm a').format(ticket.createdAt.toLocal()),
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '${ticket.orderNumber} • ${DateFormat('hh:mm a').format(ticket.createdAt.toLocal())}',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ],
                   ),
@@ -197,7 +176,7 @@ class KitchenTicketCard extends StatelessWidget {
 
           // 2. Metadata Bar: Fulfillment Type Badge / Floor / Server
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : const Color(0xFFF8FAFC),
               border: Border(bottom: BorderSide(color: borderColor, width: 0.8)),
@@ -214,33 +193,36 @@ class KitchenTicketCard extends StatelessWidget {
                         ),
                       ),
                       if (ticket.floor != null && ticket.floor!.isNotEmpty) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Flexible(
                           child: Text(
                             '• ${ticket.floor}',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               color: isDark ? Colors.white60 : const Color(0xFF64748B),
                               fontWeight: FontWeight.w600,
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 120),
-                  child: Text(
-                    ticket.serverName ?? 'Staff',
-                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    textAlign: TextAlign.end,
+                if (ticket.serverName != null && ticket.serverName!.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 85),
+                    child: Text(
+                      ticket.serverName!,
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      textAlign: TextAlign.end,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
