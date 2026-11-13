@@ -213,8 +213,6 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           _prepStartTimeMap.remove(order.id);
         }
 
-        final isTakeawayOrDelivery = order.orderType == OrderType.takeaway || order.orderType == OrderType.delivery;
-
         // Map OrderStatus to KotStatus:
         // Prioritize real-time backend order state (READY, SERVED) across all devices!
         KotStatus kotStatus;
@@ -233,20 +231,16 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           // Keep active status previously set locally or from incoming ticket
           kotStatus = _ticketStatusMap[order.id]!;
         } else if (order.status == OrderStatus.completed && !hasNewItems) {
-          if (isTakeawayOrDelivery) {
-            // Takeaway and Delivery orders are paid upfront at the counter (status: COMPLETED),
-            // but the kitchen has not cooked or handed them over yet!
-            final ageHours = DateTime.now().difference(order.createdAt).inHours;
-            if (ageHours < 12) {
-              kotStatus = KotStatus.newOrder;
-              _ticketStatusMap[order.id] = KotStatus.newOrder;
-            } else {
-              // Historical completed takeaway (> 12h) is considered served
-              kotStatus = KotStatus.served;
-              _ticketStatusMap[order.id] = KotStatus.served;
-            }
+          final ageHours = DateTime.now().difference(order.createdAt).inHours;
+          final isRecentOrder = ageHours < 12;
+          if (isRecentOrder) {
+            // When an order is settled upfront via "Settle & Pay" (whether Dine-In or Takeaway),
+            // billing payment is COMPLETED, but the kitchen has not cooked/served the food yet!
+            // It must remain active (newOrder) in the kitchen until staff preps/serves it.
+            kotStatus = KotStatus.newOrder;
+            _ticketStatusMap[order.id] = KotStatus.newOrder;
           } else {
-            // Dine-In orders are paid AFTER eating, so COMPLETED means food was already served
+            // Historical completed orders (> 12h) are considered served
             kotStatus = KotStatus.served;
             _ticketStatusMap[order.id] = KotStatus.served;
           }
@@ -265,7 +259,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
               kotStatus = isRecentOrder ? KotStatus.newOrder : KotStatus.served;
               break;
             case OrderStatus.completed:
-              if (isTakeawayOrDelivery && isRecentOrder) {
+              if (isRecentOrder) {
                 kotStatus = KotStatus.newOrder;
                 _ticketStatusMap[order.id] = KotStatus.newOrder;
               } else {
@@ -283,8 +277,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
 
         // Initialize served quantities if order came from backend in served status
         final isOrderGenuinelyServed = kotStatus == KotStatus.served ||
-            order.status == OrderStatus.served ||
-            (!isTakeawayOrDelivery && order.status == OrderStatus.completed);
+            order.status == OrderStatus.served;
 
         if (isOrderGenuinelyServed) {
           for (final it in order.items) {

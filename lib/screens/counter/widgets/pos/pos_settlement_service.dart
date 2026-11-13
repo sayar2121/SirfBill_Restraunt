@@ -47,6 +47,7 @@ class PosSettlementService {
 
     String orderId;
     String orderNumber;
+    final bool isExistingHeldOrder = state.activeOrderId != null;
 
     // ── Step 1: Create or append to existing order ───────────────────────────
     if (state.activeOrderId != null) {
@@ -152,16 +153,31 @@ class PosSettlementService {
       notes: c.notes,
     )).toList();
 
+    String? resolvedTable = state.selectedTableId;
+    String? resolvedFloor;
+    if (state.orderType == OrderType.dineIn && state.selectedTableId != null) {
+      final matchingTable = tables.where((t) => t.id == state.selectedTableId).firstOrNull;
+      if (matchingTable != null) {
+        resolvedTable = matchingTable.label;
+        if (matchingTable.floor.isNotEmpty) resolvedFloor = matchingTable.floor;
+      }
+    }
+
+    final serverLabel = state.orderType == OrderType.takeaway
+        ? 'Takeaway POS'
+        : (state.orderType == OrderType.delivery
+            ? 'Delivery Counter'
+            : (state.customerName.isNotEmpty ? state.customerName : 'Dine-in POS'));
+
     ref.read(kitchenDisplayProvider.notifier).addTicket(
       KitchenTicket(
         id: orderId,
         kotNumber: 'KOT-${orderNumber.replaceAll("#", "").replaceAll("ORD-", "")}',
         orderNumber: orderNumber,
         orderType: state.orderType,
-        tableLabel: state.selectedTableId,
-        serverName: state.orderType == OrderType.takeaway
-            ? 'Takeaway POS'
-            : (state.customerName.isNotEmpty ? state.customerName : 'Walk-in Guest'),
+        tableLabel: resolvedTable,
+        floor: resolvedFloor,
+        serverName: serverLabel,
         status: KotStatus.newOrder,
         createdAt: DateTime.now(),
         items: kotItems,
@@ -176,13 +192,19 @@ class PosSettlementService {
     ref.read(restaurantReportProvider.notifier).loadReportData();
     onReloadMenu();
 
-    // ── Step 3b: If Dine-In table order was settled and paid, free the table to Available/Vacant ─
+    // ── Step 3b: Table status handling for Dine-In ───────────────────────────
     if (state.orderType == OrderType.dineIn && state.selectedTableId != null) {
       try {
-        await RestaurantPosService.updateTableStatus(state.selectedTableId!, TableStatus.available);
+        if (isExistingHeldOrder) {
+          // If order was already running on table, settling payment frees the table
+          await RestaurantPosService.updateTableStatus(state.selectedTableId!, TableStatus.available);
+        } else {
+          // If paying upfront at counter without hold, table is now occupied for dining
+          await RestaurantPosService.updateTableStatus(state.selectedTableId!, TableStatus.occupied);
+        }
         ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
       } catch (e) {
-        debugPrint('Warning: Freeing table status failed: $e');
+        debugPrint('Warning: Updating table status failed: $e');
       }
     }
 
