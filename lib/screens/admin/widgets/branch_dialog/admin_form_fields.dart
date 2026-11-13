@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class AdminFormFieldWidgets {
   static Widget buildSectionHeader(String title, String subtitle, IconData icon) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           padding: const EdgeInsets.all(8),
@@ -23,12 +24,14 @@ class AdminFormFieldWidgets {
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                softWrap: false,
               ),
               Text(
                 subtitle,
                 style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                softWrap: false,
               ),
             ],
           ),
@@ -87,6 +90,17 @@ class AdminFormFieldWidgets {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
+      selectedItemBuilder: (context) {
+        return effectiveItems
+            .map((item) => Text(
+                  item,
+                  style: const TextStyle(fontSize: 12.5),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  softWrap: false,
+                ))
+            .toList();
+      },
       items: effectiveItems
           .map((item) => DropdownMenuItem(
                 value: item as T,
@@ -95,6 +109,7 @@ class AdminFormFieldWidgets {
                   style: const TextStyle(fontSize: 12.5),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
+                  softWrap: false,
                 ),
               ))
           .toList(),

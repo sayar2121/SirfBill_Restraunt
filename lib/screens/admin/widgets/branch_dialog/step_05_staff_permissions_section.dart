@@ -58,6 +58,8 @@ class Step05StaffPermissionsSection extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: 'Assign Outlet Manager',
                 prefixIcon: const Icon(Icons.manage_accounts_rounded, size: 20),
+                prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               items: [
@@ -66,6 +68,8 @@ class Step05StaffPermissionsSection extends StatelessWidget {
                   child: Text(
                     'No Manager Assigned Yet',
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    softWrap: false,
                   ),
                 ),
                 ...availableStaff.map((u) => DropdownMenuItem(
@@ -73,9 +77,27 @@ class Step05StaffPermissionsSection extends StatelessWidget {
                       child: Text(
                         '${u.name} (${u.role.toUpperCase()})',
                         overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
                       ),
                     )),
               ],
+              selectedItemBuilder: (context) {
+                return [
+                  const Text(
+                    'No Manager Assigned Yet',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                  ...availableStaff.map((u) => Text(
+                        '${u.name} (${u.role.toUpperCase()})',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                      )),
+                ];
+              },
               onChanged: onAssignedManagerChanged,
             ),
             const SizedBox(height: 18),

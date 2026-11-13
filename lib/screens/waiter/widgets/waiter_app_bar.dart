@@ -223,8 +223,42 @@ class WaiterAppBar extends StatelessWidget implements PreferredSizeWidget {
           message: 'Logout',
           child: InkWell(
             onTap: () async {
-              await AuthService.logout();
-              if (context.mounted) context.go('/dashboard');
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+                      SizedBox(width: 8),
+                      Text('Exit Waiter / Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  content: const Text(
+                    'Are you sure you want to log out of the Waiter portal and return to the main dashboard?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Logout'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true && context.mounted) {
+                await AuthService.logout();
+                if (context.mounted) context.go('/dashboard');
+              }
             },
             borderRadius: BorderRadius.circular(8),
             child: Container(
