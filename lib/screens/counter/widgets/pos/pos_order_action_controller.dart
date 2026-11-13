@@ -96,6 +96,19 @@ class PosOrderActionController {
     final notes = posState.orderNotes;
     final orderTypeStr = posState.orderType.name;
 
+    String? tableLabel;
+    String? floor = posState.selectedFloor;
+    if (posState.orderType == OrderType.dineIn && posState.selectedTableId != null) {
+      final liveTables = ref.read(restaurantTableProvider).tables;
+      final matchingTable = liveTables.where((t) => t.id == posState.selectedTableId).firstOrNull;
+      if (matchingTable != null) {
+        tableLabel = matchingTable.label;
+        if (matchingTable.floor.isNotEmpty) floor = matchingTable.floor;
+      } else {
+        tableLabel = posState.selectedTableId;
+      }
+    }
+
     if (posState.activeOrderId != null) {
       final List<PosCartItem> deltaItems = [];
       final initialItems = posState.initialCart ?? const <PosCartItem>[];
@@ -194,10 +207,37 @@ class PosOrderActionController {
     );
 
     if (res != null) {
-      final orderNum = res['order_number']?.toString() ?? 'Order';
+      final orderId = res['id']?.toString() ?? 'ORD-${DateTime.now().millisecondsSinceEpoch % 10000}';
+      final orderNum = res['order_number']?.toString() ?? '#ORD-${orderId.substring(0, orderId.length > 6 ? 6 : orderId.length)}';
+      final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
       final tableId = posState.selectedTableId;
+
+      ref.read(kitchenDisplayProvider.notifier).addTicket(
+        KitchenTicket(
+          id: orderId,
+          kotNumber: kotNum,
+          orderNumber: orderNum,
+          orderType: posState.orderType,
+          tableLabel: tableLabel,
+          floor: floor,
+          serverName: posState.orderType == OrderType.takeaway
+              ? 'Takeaway POS'
+              : (custName.isNotEmpty ? custName : 'Waitstaff'),
+          status: KotStatus.newOrder,
+          createdAt: DateTime.now(),
+          items: cartSnapshot.map((c) => KotItem(
+            id: c.item.id,
+            name: c.item.name,
+            quantity: c.quantity,
+            notes: c.notes,
+          )).toList(),
+          specialInstruction: notes,
+        ),
+      );
+
       ref.read(restaurantOrderProvider.notifier).loadOrders();
       ref.read(restaurantTableProvider.notifier).loadTables();
+      ref.read(kitchenDisplayProvider.notifier).loadTickets(silent: true);
       onReloadMenu();
 
       if (posState.orderType == OrderType.dineIn && tableId != null) {
@@ -213,7 +253,7 @@ class PosOrderActionController {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$orderNum placed on Hold! Table is now OCCUPIED.'),
+            content: Text('$orderNum placed on Hold! Sent to Kitchen.'),
             backgroundColor: const Color(0xFF2563EB),
           ),
         );
@@ -390,7 +430,9 @@ class PosOrderActionController {
           orderType: posState.orderType,
           tableLabel: tableLabel,
           floor: floor,
-          serverName: custName.isNotEmpty ? custName : 'Waitstaff',
+          serverName: posState.orderType == OrderType.takeaway
+              ? 'Takeaway POS'
+              : (custName.isNotEmpty ? custName : 'Waitstaff'),
           status: KotStatus.newOrder,
           createdAt: DateTime.now(),
           items: cartSnapshot.map((c) => KotItem(

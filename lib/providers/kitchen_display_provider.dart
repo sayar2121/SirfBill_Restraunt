@@ -213,6 +213,8 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           _prepStartTimeMap.remove(order.id);
         }
 
+        final isTakeawayOrDelivery = order.orderType == OrderType.takeaway || order.orderType == OrderType.delivery;
+
         // Map OrderStatus to KotStatus:
         // Prioritize real-time backend order state (READY, SERVED) across all devices!
         KotStatus kotStatus;
@@ -227,12 +229,27 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           // Explicitly marked READY on backend (kitchen cooked it, ready for waiter to serve!)
           kotStatus = KotStatus.ready;
           _ticketStatusMap[order.id] = KotStatus.ready;
-        } else if (order.status == OrderStatus.completed && !hasNewItems) {
-          // If order is completed/settled on POS with no new running items, it is already served!
-          kotStatus = KotStatus.served;
-          _ticketStatusMap[order.id] = KotStatus.served;
-        } else if (_ticketStatusMap.containsKey(order.id)) {
+        } else if (_ticketStatusMap.containsKey(order.id) && !hasNewItems) {
+          // Keep active status previously set locally or from incoming ticket
           kotStatus = _ticketStatusMap[order.id]!;
+        } else if (order.status == OrderStatus.completed && !hasNewItems) {
+          if (isTakeawayOrDelivery) {
+            // Takeaway and Delivery orders are paid upfront at the counter (status: COMPLETED),
+            // but the kitchen has not cooked or handed them over yet!
+            final ageHours = DateTime.now().difference(order.createdAt).inHours;
+            if (ageHours < 12) {
+              kotStatus = KotStatus.newOrder;
+              _ticketStatusMap[order.id] = KotStatus.newOrder;
+            } else {
+              // Historical completed takeaway (> 12h) is considered served
+              kotStatus = KotStatus.served;
+              _ticketStatusMap[order.id] = KotStatus.served;
+            }
+          } else {
+            // Dine-In orders are paid AFTER eating, so COMPLETED means food was already served
+            kotStatus = KotStatus.served;
+            _ticketStatusMap[order.id] = KotStatus.served;
+          }
         } else {
           final ageHours = DateTime.now().difference(order.createdAt).inHours;
           final isRecentOrder = ageHours < 12;
@@ -248,7 +265,13 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
               kotStatus = isRecentOrder ? KotStatus.newOrder : KotStatus.served;
               break;
             case OrderStatus.completed:
-              kotStatus = KotStatus.served;
+              if (isTakeawayOrDelivery && isRecentOrder) {
+                kotStatus = KotStatus.newOrder;
+                _ticketStatusMap[order.id] = KotStatus.newOrder;
+              } else {
+                kotStatus = KotStatus.served;
+                _ticketStatusMap[order.id] = KotStatus.served;
+              }
               break;
             case OrderStatus.served:
               kotStatus = KotStatus.served;
@@ -259,7 +282,11 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         }
 
         // Initialize served quantities if order came from backend in served status
-        if (kotStatus == KotStatus.served || order.status == OrderStatus.served || order.status == OrderStatus.completed) {
+        final isOrderGenuinelyServed = kotStatus == KotStatus.served ||
+            order.status == OrderStatus.served ||
+            (!isTakeawayOrDelivery && order.status == OrderStatus.completed);
+
+        if (isOrderGenuinelyServed) {
           for (final it in order.items) {
             final key = '${order.id}_${it.item.id}';
             _servedItemQuantities.putIfAbsent(key, () => it.quantity);
@@ -425,6 +452,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   /// Add a ticket directly into state so new POS orders appear instantly
   void addTicket(KitchenTicket ticket) {
     _knownTicketIds.add(ticket.id);
+    _ticketStatusMap[ticket.id] = ticket.status;
     final existing = state.tickets.where((t) => t.id != ticket.id).toList();
     state = state.copyWith(
       tickets: [ticket, ...existing],
