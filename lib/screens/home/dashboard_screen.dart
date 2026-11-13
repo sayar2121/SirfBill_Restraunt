@@ -276,10 +276,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 final screenHeight = constraints.maxHeight;
                 final isWeb = screenWidth > 900;
                 final isMobile = screenWidth < 500;
+                final isTablet = screenWidth >= 500 && screenWidth <= 1100;
                 final isCompactHeight = screenHeight < 720;
 
                 return SingleChildScrollView(
-                  physics: (isMobile && screenHeight >= 540)
+                  physics: screenHeight >= 500
                       ? const NeverScrollableScrollPhysics()
                       : const ClampingScrollPhysics(),
                   child: ConstrainedBox(
@@ -293,7 +294,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: isWeb ? 48.0 : (isMobile ? 12.0 : 16.0),
-                            vertical: isMobile ? 4.0 : (isCompactHeight ? 6.0 : 12.0),
+                            vertical: isMobile ? 4.0 : (isTablet ? 6.0 : (isCompactHeight ? 6.0 : 12.0)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -380,7 +381,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: isWeb ? 36.0 : (isMobile ? 12.0 : 16.0),
-                            vertical: isMobile ? 2.0 : (isCompactHeight ? 8.0 : 16.0),
+                            vertical: isMobile ? 2.0 : (isTablet ? 4.0 : (isCompactHeight ? 8.0 : 16.0)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -392,20 +393,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
                                   height: isMobile
                                       ? 40
-                                      : (isCompactHeight ? (isWeb ? 80 : 60) : (isWeb ? 110 : 80)),
+                                      : (isTablet
+                                          ? (isCompactHeight ? 48 : 58)
+                                          : (isCompactHeight ? 60 : (isWeb ? 100 : 80))),
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) => Column(
                                     children: [
                                       Icon(
                                         Icons.restaurant_rounded,
                                         color: const Color(0xFF10B981),
-                                        size: isMobile ? 32 : 42,
+                                        size: isMobile ? 32 : (isTablet ? 36 : 42),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         'sirfbill',
                                         style: TextStyle(
-                                          fontSize: isMobile ? 18 : 24,
+                                          fontSize: isMobile ? 18 : (isTablet ? 20 : 24),
                                           fontWeight: FontWeight.bold,
                                           color: isDark ? Colors.white : const Color(0xFF1E293B),
                                         ),
@@ -415,7 +418,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ),
                               ),
 
-                              SizedBox(height: isMobile ? 6 : (isCompactHeight ? 16 : 24)),
+                              SizedBox(height: isMobile ? 6 : (isTablet ? (isCompactHeight ? 8 : 12) : (isCompactHeight ? 16 : 24))),
 
                               // Welcome Badge (desktop / tablet)
                               if (!isMobile) ...[
@@ -423,7 +426,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   child: Text(
                                     'WELCOME BACK!',
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: isTablet ? 10 : 11,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 2.0,
                                       color: isDark
@@ -432,7 +435,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                               ],
 
                               // "Select a Module" Header
@@ -440,7 +443,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 child: RichText(
                                   text: TextSpan(
                                     style: TextStyle(
-                                      fontSize: isWeb ? 32 : (isMobile ? 20 : 24),
+                                      fontSize: isWeb ? 32 : (isMobile ? 20 : (isTablet ? 22 : 24)),
                                       fontWeight: FontWeight.w900,
                                       color: isDark
                                           ? Colors.white
@@ -471,7 +474,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                         : 'Choose a module to continue and manage your restaurant.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      fontSize: isWeb ? 14 : (isMobile ? 11.5 : 12.5),
+                                      fontSize: isWeb ? 14 : (isMobile ? 11.5 : (isTablet ? 12 : 12.5)),
                                       fontWeight: FontWeight.w500,
                                       color: isDark
                                           ? const Color(0xFF94A3B8)
@@ -480,9 +483,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: isMobile ? 10 : (isCompactHeight ? 24 : 36)),
+                              SizedBox(height: isMobile ? 10 : (isTablet ? (isCompactHeight ? 12 : 18) : (isCompactHeight ? 24 : 36))),
 
-                              // Responsive Cards Layout: 6 Cards in 1 Row on Desktop, 2x3 Grid on Mobile
+                              // Responsive Cards Layout: 6 Cards in 1 Row on Desktop, 3x2 on Tablet, 2x3 Grid on Mobile
                               Center(
                                 child: ConstrainedBox(
                                   constraints: const BoxConstraints(maxWidth: 1560),
@@ -493,19 +496,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                       int crossAxisCount;
                                       double childAspectRatio;
 
-                                      if (width >= 1000) {
+                                      if (width >= 1050) {
                                         crossAxisCount = 6;
-                                        childAspectRatio = isCompactHeight ? 0.84 : 0.73;
-                                      } else if (width >= 680) {
+                                        childAspectRatio = isCompactHeight ? 0.90 : 0.78;
+                                      } else if (width >= 580) {
+                                        // Tablet (portrait or compact landscape): 3 columns x 2 rows
                                         crossAxisCount = 3;
-                                        childAspectRatio = 0.95;
-                                      } else if (width >= 460) {
-                                        crossAxisCount = 2;
-                                        childAspectRatio = 1.05;
+                                        final availableGridHeight = screenHeight - (isCompactHeight ? 220 : 260);
+                                        final rowHeight = (availableGridHeight - 14) / 2;
+                                        final colWidth = (width - 24) / 3;
+                                        final calculatedRatio = (colWidth / rowHeight.clamp(130.0, 185.0));
+                                        childAspectRatio = calculatedRatio.clamp(1.15, 1.45);
                                       } else {
-                                        // Mobile (< 460px): 2 columns, 3 rows - all 6 modules on 1 screen!
+                                        // Mobile (< 580px): 2 columns, 3 rows - all 6 modules on 1 screen!
                                         crossAxisCount = 2;
-                                        final availableGridHeight = screenHeight - (isMobile ? 165 : 220);
+                                        final availableGridHeight = screenHeight - (isMobile ? 165 : 200);
                                         final rowHeight = (availableGridHeight - 16) / 3;
                                         final colWidth = (width - 8) / 2;
                                         final calculatedRatio = (colWidth / rowHeight.clamp(120.0, 180.0));
@@ -541,7 +546,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                         // Footer
                         Container(
-                          padding: EdgeInsets.symmetric(vertical: isMobile ? 8 : (isCompactHeight ? 16 : 24)),
+                          padding: EdgeInsets.symmetric(
+                            vertical: isMobile ? 8 : (isTablet ? (isCompactHeight ? 8 : 12) : (isCompactHeight ? 16 : 24)),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
