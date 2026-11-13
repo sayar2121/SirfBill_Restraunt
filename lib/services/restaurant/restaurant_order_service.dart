@@ -266,37 +266,61 @@ class RestaurantOrderService {
             orderType = OrderType.delivery;
           }
 
-          String rawStatus = (json['status'] ?? json['order_status'] ?? json['kitchen_status'] ?? json['kot_status'] ?? json['state'] ?? 'OPEN').toString().toUpperCase();
+          final orderStatusStr = (json['status'] ?? json['order_status'] ?? json['state'] ?? 'OPEN').toString().toUpperCase();
+          final kitchenStatusStr = (json['kitchen_status'] ?? json['kot_status'] ?? '').toString().toUpperCase();
 
-          // Check if any attached kitchen tickets/kots are marked READY (only if order is not already SERVED or COMPLETED)
-          final isAlreadyServedOrCompleted = rawStatus == 'SERVED' ||
-              rawStatus.contains('SETTLED') ||
-              rawStatus.contains('COMPLETE');
-          if (!isAlreadyServedOrCompleted) {
-            if (json['kitchen_tickets'] is List) {
-              for (final kt in json['kitchen_tickets']) {
-                final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
-                if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
-                  rawStatus = 'READY';
-                  break;
-                }
-              }
-            }
-            if (json['kots'] is List) {
-              for (final kt in json['kots']) {
-                final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
-                if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
-                  rawStatus = 'READY';
-                  break;
+          // Check attached kitchen tickets and kots
+          bool anyKotServed = false;
+          bool allKotsServed = true;
+          bool hasKots = false;
+          bool anyKotReady = false;
+
+          void inspectKots(dynamic list) {
+            if (list is List && list.isNotEmpty) {
+              hasKots = true;
+              for (final kt in list) {
+                if (kt is Map) {
+                  final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
+                  if (s == 'SERVED' || s.contains('SERVED') || s == 'DELIVERED') {
+                    anyKotServed = true;
+                  } else {
+                    allKotsServed = false;
+                  }
+                  if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
+                    anyKotReady = true;
+                  }
                 }
               }
             }
           }
 
+          inspectKots(json['kitchen_tickets']);
+          inspectKots(json['kots']);
+
+          String rawStatus = orderStatusStr;
+
+          // Priority 1: Explicitly SERVED or DELIVERED (either on order, kitchen, or attached tickets)
+          if (kitchenStatusStr == 'SERVED' ||
+              kitchenStatusStr == 'DELIVERED' ||
+              orderStatusStr == 'SERVED' ||
+              orderStatusStr == 'DELIVERED' ||
+              (hasKots && (allKotsServed || (anyKotServed && !anyKotReady)))) {
+            rawStatus = 'SERVED';
+          }
+          // Priority 2: Explicitly READY
+          else if (kitchenStatusStr == 'READY' ||
+              orderStatusStr == 'READY' ||
+              orderStatusStr.contains('READY') ||
+              orderStatusStr == 'FOOD_READY' ||
+              orderStatusStr == 'PREPARED' ||
+              anyKotReady) {
+            rawStatus = 'READY';
+          }
+
           OrderStatus orderStatus = OrderStatus.active;
           if (rawStatus == 'READY' || rawStatus.contains('READY') || rawStatus == 'FOOD_READY' || rawStatus == 'PREPARED') {
             orderStatus = OrderStatus.ready;
-          } else if (rawStatus == 'SERVED') {
+          } else if (rawStatus == 'SERVED' || rawStatus == 'DELIVERED') {
             orderStatus = OrderStatus.served;
           } else if (rawStatus.contains('SETTLED') || rawStatus.contains('COMPLETE') || rawStatus.contains('PAID')) {
             orderStatus = OrderStatus.completed;
@@ -436,6 +460,18 @@ class RestaurantOrderService {
         data: {'target_status': status, 'status': status, 'action': status},
       );
       if (res.statusCode == 200 || res.statusCode == 201 || res.statusCode == 204) {
+        // Also execute direct PATCH so backend updates kitchen_status and kot_status database columns!
+        try {
+          await _dio.patch(
+            '/api/restaurant/orders/$orderId',
+            data: {
+              'status': status,
+              'order_status': status,
+              'kitchen_status': status,
+              'kot_status': status,
+            },
+          );
+        } catch (_) {}
         return true;
       }
     } catch (e) {

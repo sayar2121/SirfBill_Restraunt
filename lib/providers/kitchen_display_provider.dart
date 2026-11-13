@@ -227,6 +227,10 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           // Explicitly marked READY on backend (kitchen cooked it, ready for waiter to serve!)
           kotStatus = KotStatus.ready;
           _ticketStatusMap[order.id] = KotStatus.ready;
+        } else if (order.status == OrderStatus.completed && !hasNewItems) {
+          // If order is completed/settled on POS with no new running items, it is already served!
+          kotStatus = KotStatus.served;
+          _ticketStatusMap[order.id] = KotStatus.served;
         } else if (_ticketStatusMap.containsKey(order.id)) {
           kotStatus = _ticketStatusMap[order.id]!;
         } else {
@@ -241,24 +245,12 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
               kotStatus = KotStatus.newOrder;
               break;
             case OrderStatus.hold:
-              // For Dine-in / held unpaid orders, keep them active in kitchen until served
-              if (isRecentOrder) {
-                kotStatus = KotStatus.newOrder;
-              } else {
-                kotStatus = KotStatus.served;
-              }
+              kotStatus = isRecentOrder ? KotStatus.newOrder : KotStatus.served;
               break;
             case OrderStatus.completed:
-              // When POS confirms payment/settlement on Takeaway or Dine-In, kitchen still needs to PREPARE and SERVE it!
-              // Only when kitchen staff marks it Served (or order is older than today), is it moved to served.
-              if (isRecentOrder) {
-                kotStatus = KotStatus.newOrder;
-              } else {
-                kotStatus = KotStatus.served;
-              }
+              kotStatus = KotStatus.served;
               break;
             case OrderStatus.served:
-              // Explicitly served by kitchen staff!
               kotStatus = KotStatus.served;
               break;
             case OrderStatus.cancelled:
@@ -267,7 +259,7 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         }
 
         // Initialize served quantities if order came from backend in served status
-        if (order.status == OrderStatus.served) {
+        if (kotStatus == KotStatus.served || order.status == OrderStatus.served || order.status == OrderStatus.completed) {
           for (final it in order.items) {
             final key = '${order.id}_${it.item.id}';
             _servedItemQuantities.putIfAbsent(key, () => it.quantity);
