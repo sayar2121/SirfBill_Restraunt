@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../models/restaurant_report_models.dart';
 import '../models/restaurant_pos_models.dart';
 import '../services/restaurant_pos_service.dart';
@@ -35,14 +36,19 @@ class RestaurantReportState {
       case DateRangePreset.all:
         return 'All Time';
       case DateRangePreset.today:
-        return 'Today';
+        return 'Today (${DateFormat('dd MMM yyyy').format(DateTime.now())})';
       case DateRangePreset.thisWeek:
         return 'This Week';
       case DateRangePreset.thisMonth:
-        return 'This Month';
+        return 'This Month (${DateFormat('MMMM yyyy').format(DateTime.now())})';
       case DateRangePreset.thisYear:
-        return 'This Year';
+        return 'This Year (${DateTime.now().year})';
       case DateRangePreset.custom:
+        if (customRange != null) {
+          final s = customRange!.start;
+          final e = customRange!.end;
+          return '${DateFormat('dd/MM/yyyy').format(s)} - ${DateFormat('dd/MM/yyyy').format(e)}';
+        }
         return 'Custom Range';
     }
   }
@@ -395,35 +401,40 @@ class RestaurantReportNotifier extends Notifier<RestaurantReportState> {
         break;
       case DateRangePreset.today:
         rangeStart = DateTime(now.year, now.month, now.day);
-        rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
         break;
       case DateRangePreset.thisWeek:
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
         rangeStart = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-        rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
         break;
       case DateRangePreset.thisMonth:
         rangeStart = DateTime(now.year, now.month, 1);
-        rangeEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        final nextMonth = (now.month == 12) ? DateTime(now.year + 1, 1, 1) : DateTime(now.year, now.month + 1, 1);
+        final lastDayOfMonth = nextMonth.subtract(const Duration(days: 1));
+        rangeEnd = DateTime(lastDayOfMonth.year, lastDayOfMonth.month, lastDayOfMonth.day, 23, 59, 59, 999);
         break;
       case DateRangePreset.thisYear:
         rangeStart = DateTime(now.year, 1, 1);
-        rangeEnd = DateTime(now.year, 12, 31, 23, 59, 59);
+        rangeEnd = DateTime(now.year, 12, 31, 23, 59, 59, 999);
         break;
       case DateRangePreset.custom:
-        rangeStart = state.customRange?.start;
+        rangeStart = state.customRange != null
+            ? DateTime(state.customRange!.start.year, state.customRange!.start.month, state.customRange!.start.day)
+            : null;
         rangeEnd = state.customRange != null
-            ? DateTime(state.customRange!.end.year, state.customRange!.end.month, state.customRange!.end.day, 23, 59, 59)
+            ? DateTime(state.customRange!.end.year, state.customRange!.end.month, state.customRange!.end.day, 23, 59, 59, 999)
             : null;
         break;
     }
 
-    // Filter orders by date range
+    // Filter orders by date range comparing in local calendar time
     final filteredOrders = _allOrders.where((order) {
-      if (rangeStart != null && order.createdAt.isBefore(rangeStart)) {
+      final orderDate = order.createdAt.toLocal();
+      if (rangeStart != null && orderDate.isBefore(rangeStart)) {
         return false;
       }
-      if (rangeEnd != null && order.createdAt.isAfter(rangeEnd)) {
+      if (rangeEnd != null && orderDate.isAfter(rangeEnd)) {
         return false;
       }
       return true;

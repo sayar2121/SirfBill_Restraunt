@@ -61,6 +61,7 @@ class ReportsScreen extends ConsumerWidget {
                 topDishes: reportState.topDishes,
                 orders: reportState.orders,
                 auditLogs: reportState.auditLogs,
+                activeTab: reportState.activeTab,
               );
             },
           ),

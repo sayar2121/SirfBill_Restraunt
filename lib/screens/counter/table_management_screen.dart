@@ -118,19 +118,19 @@ class _TableManagementScreenState extends ConsumerState<TableManagementScreen> {
 
                     if (width < 450) {
                       crossAxisCount = 1;
-                      childAspectRatio = 1.8;
+                      childAspectRatio = 1.6;
                     } else if (width < 700) {
                       crossAxisCount = 2;
-                      childAspectRatio = 1.35;
+                      childAspectRatio = 1.18;
                     } else if (width < 1050) {
                       crossAxisCount = 3;
-                      childAspectRatio = 1.38;
+                      childAspectRatio = 1.22;
                     } else if (width < 1400) {
                       crossAxisCount = 4;
-                      childAspectRatio = 1.40;
+                      childAspectRatio = 1.25;
                     } else {
                       crossAxisCount = 5;
-                      childAspectRatio = 1.45;
+                      childAspectRatio = 1.30;
                     }
 
                     return GridView.builder(

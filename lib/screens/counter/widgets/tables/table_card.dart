@@ -63,7 +63,7 @@ class TableCard extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(20),
@@ -195,14 +195,14 @@ class TableCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // 2. Middle Section: Visual Seating Capacity & Order Live Metrics
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isDark ? const Color(0xFF334155).withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
                   ),
@@ -305,32 +305,32 @@ class TableCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // 3. Action Buttons: "Free/Occupied" toggle & "Take Order / Open POS"
               Row(
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 36,
+                      height: 34,
                       child: OutlinedButton.icon(
                         onPressed: onStatusToggle,
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           side: BorderSide(
                             color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                           ),
                         ),
                         icon: Icon(
                           isOccupied ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-                          size: 14,
+                          size: 13,
                           color: isDark ? Colors.white70 : const Color(0xFF475569),
                         ),
                         label: Text(
                           isOccupied ? 'Release' : 'Occupy',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white70 : const Color(0xFF475569),
                           ),
@@ -340,23 +340,23 @@ class TableCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: SizedBox(
-                      height: 36,
+                      height: 34,
                       child: ElevatedButton.icon(
                         onPressed: onOpenPos,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           elevation: 0,
                         ),
-                        icon: const Icon(Icons.point_of_sale_rounded, size: 14),
+                        icon: const Icon(Icons.point_of_sale_rounded, size: 13),
                         label: const Text(
                           'POS Bill',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
