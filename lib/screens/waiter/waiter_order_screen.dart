@@ -64,8 +64,8 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     _loadWaiterInfo();
     _loadMenuAndTables();
 
-    // Auto-refresh tables, orders, and kitchen tickets state every 5 seconds for real-time live sync
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    // Auto-refresh tables, orders, and kitchen tickets state every 3 seconds for real-time live sync
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         ref.read(restaurantTableProvider.notifier).loadTables(silent: true);
         ref.read(restaurantOrderProvider.notifier).loadOrders();
@@ -469,6 +469,14 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
           throw Exception('Backend could not update existing order. Please refresh and try again.');
         }
 
+        // Explicitly ensure order status transitions back to SENT_TO_KITCHEN so KDS on any tablet displays it as active!
+        try {
+          await RestaurantPosService.transitionOrderStatus(
+            orderId: _activeOrderId!,
+            targetStatus: 'SENT_TO_KITCHEN',
+          );
+        } catch (_) {}
+
         final orderNum = _activeOrderNumber ?? 'ORD';
         final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
 
@@ -780,6 +788,9 @@ class _WaiterOrderScreenState extends ConsumerState<WaiterOrderScreen> {
     final kdsState = ref.watch(kitchenDisplayProvider);
     final readyTickets = kdsState.tickets.where((t) => t.status == KotStatus.ready).toList();
     final readyTableLabels = readyTickets.map((t) => t.tableLabel?.trim()).whereType<String>().toSet();
+
+    // Clean up notified IDs if orders were served or cleared
+    _notifiedReadyTicketIds.removeWhere((id) => !readyTickets.any((t) => t.id == id));
 
     // Trigger audible chime and toast notification when an order is marked ready by the kitchen
     final newlyReadyTickets = readyTickets.where((t) => !_notifiedReadyTicketIds.contains(t.id)).toList();

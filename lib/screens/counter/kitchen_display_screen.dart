@@ -139,8 +139,11 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
 
     return Scaffold(
       backgroundColor: screenBg,
-      body: Column(
-        children: [
+      body: SafeArea(
+        top: widget.isStandalone,
+        bottom: true,
+        child: Column(
+          children: [
           // 1. Kitchen Filter Header (Matches POS Billing Control Style)
           KitchenFilterHeader(
             totalCount: kdsState.totalCount,
@@ -244,15 +247,17 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                     : LayoutBuilder(
                         builder: (context, constraints) {
                           final width = constraints.maxWidth;
+                          final isMobile = width < 550;
+                          final isTablet = width >= 550 && width < 900;
                           int crossAxisCount;
                           double childAspectRatio;
 
-                          if (width < 500) {
+                          if (isMobile) {
                             crossAxisCount = 1;
                             childAspectRatio = 1.05;
-                          } else if (width < 850) {
+                          } else if (isTablet) {
                             crossAxisCount = 2;
-                            childAspectRatio = 0.88;
+                            childAspectRatio = 0.84;
                           } else if (width < 1250) {
                             crossAxisCount = 3;
                             childAspectRatio = 0.82;
@@ -265,12 +270,12 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                           }
 
                           return GridView.builder(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(isMobile ? 10 : (isTablet ? 12 : 16)),
                             itemCount: tickets.length,
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
+                              crossAxisSpacing: isMobile ? 10 : 14,
+                              mainAxisSpacing: isMobile ? 10 : 14,
                               childAspectRatio: childAspectRatio,
                             ),
                             itemBuilder: (context, index) {
@@ -298,6 +303,7 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

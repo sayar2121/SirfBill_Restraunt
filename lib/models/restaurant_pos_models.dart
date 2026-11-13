@@ -206,6 +206,7 @@ class RestaurantOrder {
   final double grandTotal;
   final DateTime createdAt;
   final String? notes;
+  final int version;
 
   const RestaurantOrder({
     required this.id,
@@ -226,6 +227,7 @@ class RestaurantOrder {
     required this.grandTotal,
     required this.createdAt,
     this.notes,
+    this.version = 1,
   });
 
   RestaurantOrder copyWith({
@@ -247,6 +249,7 @@ class RestaurantOrder {
     double? grandTotal,
     DateTime? createdAt,
     String? notes,
+    int? version,
   }) {
     return RestaurantOrder(
       id: id ?? this.id,
@@ -267,6 +270,7 @@ class RestaurantOrder {
       grandTotal: grandTotal ?? this.grandTotal,
       createdAt: createdAt ?? this.createdAt,
       notes: notes ?? this.notes,
+      version: version ?? this.version,
     );
   }
 }

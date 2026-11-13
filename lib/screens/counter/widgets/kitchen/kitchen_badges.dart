@@ -278,7 +278,7 @@ class KitchenOrderTypeBadge extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
         color: typeColor.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(6),
@@ -289,12 +289,16 @@ class KitchenOrderTypeBadge extends StatelessWidget {
         children: [
           Icon(typeIcon, size: 12, color: typeColor),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              color: typeColor,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: typeColor,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],

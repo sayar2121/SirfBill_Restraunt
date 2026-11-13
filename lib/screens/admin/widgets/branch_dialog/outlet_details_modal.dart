@@ -310,13 +310,19 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
       },
     ];
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 650;
+
     return Dialog(
       backgroundColor: bg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 18,
+        vertical: isMobile ? 16 : 24,
+      ),
       child: Container(
-        width: 780,
-        height: 640,
+        width: isMobile ? double.infinity : 780,
+        height: isMobile ? MediaQuery.of(context).size.height * 0.88 : 640,
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(18),
@@ -325,7 +331,10 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
           children: [
             // Modal Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 14 : 22,
+                vertical: isMobile ? 12 : 16,
+              ),
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: borderColor)),
               ),
@@ -363,9 +372,17 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                       children: [
                         Row(
                           children: [
-                            Text(
-                              widget.outlet.name,
-                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textColor),
+                            Flexible(
+                              child: Text(
+                                widget.outlet.name,
+                                style: TextStyle(
+                                  fontSize: isMobile ? 15 : 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: textColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Container(
@@ -409,6 +426,8 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
               color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
               child: TabBar(
                 controller: _tabController,
+                isScrollable: isMobile,
+                tabAlignment: isMobile ? TabAlignment.start : TabAlignment.fill,
                 labelColor: const Color(0xFF6366F1),
                 unselectedLabelColor: subtitleColor,
                 indicatorColor: const Color(0xFF6366F1),
@@ -521,7 +540,10 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                                           style: TextStyle(fontSize: 11, color: subtitleColor),
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
+                                        Wrap(
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             // User ID Pill
                                             Container(
@@ -535,7 +557,14 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text('User ID: ', style: TextStyle(fontSize: 11, color: subtitleColor)),
-                                                  Text(activeUser, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor)),
+                                                  ConstrainedBox(
+                                                    constraints: BoxConstraints(maxWidth: isMobile ? 120 : 200),
+                                                    child: Text(
+                                                      activeUser,
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
                                                   const SizedBox(width: 4),
                                                   InkWell(
                                                     onTap: () => _copyToClipboard(activeUser, 'User ID'),
@@ -544,7 +573,6 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(width: 8),
                                             // Password Pill
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -630,17 +658,24 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
 
             // Footer
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 14 : 22,
+                vertical: isMobile ? 10 : 14,
+              ),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: borderColor)),
               ),
               child: Row(
                 children: [
-                  Text(
-                    'Staff can use these credentials to log in to POS, Kitchen, and Inventory.',
-                    style: TextStyle(fontSize: 11.5, color: subtitleColor),
+                  Expanded(
+                    child: Text(
+                      'Staff can use these credentials to log in to POS, Kitchen, and Inventory.',
+                      style: TextStyle(fontSize: 11.5, color: subtitleColor),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6366F1),
@@ -673,7 +708,16 @@ class _OutletDetailsModalState extends State<OutletDetailsModal> with SingleTick
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtitleColor)),
-          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );

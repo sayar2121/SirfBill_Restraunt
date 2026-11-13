@@ -12,6 +12,9 @@ class AdminTopHeader extends StatelessWidget {
   final Color borderColor;
   final Color textColor;
   final Color subtitleColor;
+  final bool isMobile;
+  final bool isTablet;
+  final VoidCallback? onOpenDrawer;
 
   const AdminTopHeader({
     super.key,
@@ -24,6 +27,9 @@ class AdminTopHeader extends StatelessWidget {
     required this.borderColor,
     required this.textColor,
     required this.subtitleColor,
+    this.isMobile = false,
+    this.isTablet = false,
+    this.onOpenDrawer,
   });
 
   @override
@@ -44,13 +50,33 @@ class AdminTopHeader extends StatelessWidget {
     final userInitial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: cardBg,
         border: Border(bottom: BorderSide(color: borderColor, width: 1)),
       ),
-      child: Row(
-        children: [
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 20,
+            vertical: isMobile ? 8 : 12,
+          ),
+          child: Row(
+            children: [
+              // Drawer Hamburger Menu on Mobile
+              if (onOpenDrawer != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.menu_rounded, size: 24),
+                  onPressed: onOpenDrawer,
+                  color: textColor,
+                  tooltip: 'Open Menu',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+          // Title & Subtitle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,72 +85,106 @@ class AdminTopHeader extends StatelessWidget {
                 Text(
                   titleText,
                   style: TextStyle(
-                    fontSize: 17,
+                    fontSize: isMobile ? 15 : 17,
                     fontWeight: FontWeight.w800,
                     color: textColor,
                     letterSpacing: -0.2,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  descText,
-                  style: TextStyle(fontSize: 11, color: subtitleColor),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (!isMobile) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    descText,
+                    style: TextStyle(fontSize: 11, color: subtitleColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          OutlinedButton.icon(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded, size: 15),
-            label: const Text('Refresh', style: TextStyle(fontSize: 12)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: textColor,
-              side: BorderSide(color: borderColor),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: () => context.go('/dashboard'),
-            icon: const Icon(Icons.dashboard_customize_rounded, size: 15),
-            label: const Text('All Modules', style: TextStyle(fontSize: 12)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: textColor,
-              side: BorderSide(color: borderColor),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: onLaunchPos,
-            icon: const Icon(Icons.point_of_sale_rounded, size: 15),
-            label: const Text('Launch POS', style: TextStyle(fontSize: 12)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              elevation: 0,
-            ),
-          ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 6),
 
-          // Divider
-          Container(
-            height: 28,
-            width: 1,
-            color: borderColor,
-          ),
-          const SizedBox(width: 14),
+          // Refresh Button
+          if (isMobile)
+            IconButton(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              tooltip: 'Refresh',
+              color: textColor,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: const Text('Refresh', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: textColor,
+                side: BorderSide(color: borderColor),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          const SizedBox(width: 4),
 
-          // User Profile Pill with Dropdown (About SirfBill & Logout)
+          // All Modules (Desktop & Tablet)
+          if (!isMobile) ...[
+            OutlinedButton.icon(
+              onPressed: () => context.go('/dashboard'),
+              icon: const Icon(Icons.dashboard_customize_rounded, size: 15),
+              label: Text(isTablet ? 'Modules' : 'All Modules', style: const TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: textColor,
+                side: BorderSide(color: borderColor),
+                padding: EdgeInsets.symmetric(horizontal: isTablet ? 9 : 12, vertical: 9),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+
+          // Launch POS
+          if (isMobile)
+            IconButton(
+              onPressed: onLaunchPos,
+              icon: const Icon(Icons.point_of_sale_rounded, size: 20),
+              tooltip: 'Launch POS',
+              color: const Color(0xFF10B981),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: onLaunchPos,
+              icon: const Icon(Icons.point_of_sale_rounded, size: 15),
+              label: Text(isTablet ? 'POS' : 'Launch POS', style: const TextStyle(fontSize: 12)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: isTablet ? 10 : 14, vertical: 9),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+            ),
+
+          if (!isMobile) ...[
+            const SizedBox(width: 10),
+            Container(
+              height: 24,
+              width: 1,
+              color: borderColor,
+            ),
+            const SizedBox(width: 10),
+          ] else
+            const SizedBox(width: 4),
+
+          // User Profile Pill / Avatar with Dropdown
           PopupMenuButton<String>(
-            offset: const Offset(0, 48),
+            offset: const Offset(0, 44),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: borderColor),
@@ -133,7 +193,9 @@ class AdminTopHeader extends StatelessWidget {
             elevation: 8,
             tooltip: 'Account & Actions',
             onSelected: (value) {
-              if (value == 'about') {
+              if (value == 'modules') {
+                context.go('/dashboard');
+              } else if (value == 'about') {
                 AboutUsDialog.show(context);
               } else if (value == 'logout') {
                 onLogout();
@@ -164,6 +226,29 @@ class AdminTopHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              if (isMobile) ...[
+                const PopupMenuDivider(height: 1),
+                PopupMenuItem(
+                  value: 'modules',
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(Icons.dashboard_customize_rounded, size: 16, color: Color(0xFF10B981)),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'All Modules',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const PopupMenuDivider(height: 1),
               PopupMenuItem(
                 value: 'about',
@@ -207,64 +292,86 @@ class AdminTopHeader extends StatelessWidget {
                 ),
               ),
             ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: borderColor),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: const Color(0xFF6366F1),
-                    child: Text(
-                      userInitial,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+            child: isMobile
+                ? Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF6366F1), width: 1.5),
+                    ),
+                    child: CircleAvatar(
+                      radius: 13,
+                      backgroundColor: const Color(0xFF6366F1),
+                      child: Text(
+                        userInitial,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          displayName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'Administrator',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: subtitleColor,
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: const Color(0xFF6366F1),
+                          child: Text(
+                            userInitial,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: isTablet ? 90 : 130),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Administrator',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: subtitleColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: subtitleColor),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: subtitleColor),
-                ],
-              ),
-            ),
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
   }
 }

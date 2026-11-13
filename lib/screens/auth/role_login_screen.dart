@@ -221,58 +221,92 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 4,
                   bottom: 8,
-                  left: 24,
-                  right: 24,
+                  left: isWeb ? 24 : 12,
+                  right: isWeb ? 24 : 12,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: Colors.white,
-                        size: 18,
+                    if (isWeb)
+                      TextButton.icon(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Back',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    else
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        tooltip: 'Back',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
                       ),
-                      label: const Text(
-                        'Back',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    Text(
-                      '${widget.roleName} Login',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${widget.roleName} Login',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: isWeb ? 16 : 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: isWeb ? TextAlign.center : TextAlign.start,
                       ),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (!kIsWeb)
-                          TextButton.icon(
-                            onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
-                            icon: _isCheckingUpdate
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Icon(Icons.system_update_alt_rounded, color: Colors.white, size: 16),
-                            label: Text(
-                              _isCheckingUpdate ? 'Checking...' : 'Check Updates',
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
-                            ),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
+                          isWeb
+                              ? TextButton.icon(
+                                  onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
+                                  icon: _isCheckingUpdate
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.system_update_alt_rounded, color: Colors.white, size: 16),
+                                  label: Text(
+                                    _isCheckingUpdate ? 'Checking...' : 'Check Updates',
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                )
+                              : IconButton(
+                                  onPressed: _isCheckingUpdate ? null : _manualCheckUpdate,
+                                  icon: _isCheckingUpdate
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(Icons.system_update_alt_rounded, color: Colors.white, size: 18),
+                                  tooltip: 'Check Updates',
+                                  constraints: const BoxConstraints(),
+                                  padding: const EdgeInsets.all(8),
+                                ),
                         if (isWeb) ...[
                           const SizedBox(width: 8),
                           const Text(
@@ -489,29 +523,49 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
 }
 
   Widget _buildMobileLayout() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 450),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              Image.asset(
-                Theme.of(context).brightness == Brightness.dark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
-                height: 60,
-                fit: BoxFit.contain,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight;
+        final isCompactHeight = availableHeight < 580 || isKeyboardOpen;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              // Completely disable scrolling on mobile so the screen is 100% static and zero-scroll
+              physics: isCompactHeight && availableHeight < 360
+                  ? const ClampingScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: isCompactHeight ? 6.0 : 16.0,
               ),
-              const SizedBox(height: 32),
-              _buildLoginCard()
-            ],
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isCompactHeight) ...[
+                    Image.asset(
+                      isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
+                      height: 46,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  _buildLoginCard(isMobile: true, isCompactHeight: isCompactHeight),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard({bool isMobile = false, bool isCompactHeight = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
@@ -520,10 +574,10 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
 
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(isMobile ? (isCompactHeight ? 16 : 20) : 32),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 18 : 24),
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
@@ -537,46 +591,50 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: widget.themeColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+            if (!isCompactHeight) ...[
+              Container(
+                padding: EdgeInsets.all(isMobile ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: widget.themeColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.roleName.contains('Waiter')
+                      ? Icons.room_service_rounded
+                      : widget.roleName == 'Kitchen Display'
+                          ? Icons.soup_kitchen_rounded
+                          : Icons.admin_panel_settings,
+                  size: isMobile ? 36 : 64,
+                  color: widget.themeColor,
+                ),
               ),
-              child: Icon(
-                widget.roleName.contains('Waiter')
-                    ? Icons.room_service_rounded
-                    : widget.roleName == 'Kitchen Display'
-                        ? Icons.soup_kitchen_rounded
-                        : Icons.admin_panel_settings,
-                size: 64,
-                color: widget.themeColor,
-              ),
-            ),
-            const SizedBox(height: 16),
+              SizedBox(height: isMobile ? 10 : 16),
+            ],
             Text(
               'Access ${widget.roleName} Module',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: isMobile ? 18 : 22,
                 fontWeight: FontWeight.w900,
                 color: textColor,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isMobile ? 3 : 8),
             Text(
               'Sign in to continue',
-              style: TextStyle(color: subtitleColor, fontSize: 14),
+              style: TextStyle(color: subtitleColor, fontSize: isMobile ? 12.5 : 14),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: isMobile ? (isCompactHeight ? 12 : 16) : 24),
             TextFormField(
               controller: _userIdController,
               textInputAction: TextInputAction.next,
-              style: TextStyle(color: textColor),
+              style: TextStyle(color: textColor, fontSize: isMobile ? 13.5 : 14),
               decoration: InputDecoration(
                 hintText: 'User ID',
-                hintStyle: TextStyle(color: subtitleColor),
-                prefixIcon: const Icon(Icons.person, color: Color(0xFF94A3B8)),
+                hintStyle: TextStyle(color: subtitleColor, fontSize: isMobile ? 13 : 14),
+                prefixIcon: Icon(Icons.person, color: const Color(0xFF94A3B8), size: isMobile ? 18 : 22),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: isMobile ? 12 : 16),
                 filled: true,
                 fillColor: inputFillColor,
                 border: OutlineInputBorder(
@@ -587,24 +645,29 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: borderColor),
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: widget.themeColor, width: 1.6),
+                ),
               ),
               validator: (v) => v!.isEmpty ? 'Enter User ID' : null,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isMobile ? 10 : 16),
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
-              style: TextStyle(color: textColor),
+              style: TextStyle(color: textColor, fontSize: isMobile ? 13.5 : 14),
               onFieldSubmitted: (_) => _login(),
               decoration: InputDecoration(
                 hintText: 'Password',
-                hintStyle: TextStyle(color: subtitleColor),
-                prefixIcon: const Icon(Icons.lock, color: Color(0xFF94A3B8)),
+                hintStyle: TextStyle(color: subtitleColor, fontSize: isMobile ? 13 : 14),
+                prefixIcon: Icon(Icons.lock, color: const Color(0xFF94A3B8), size: isMobile ? 18 : 22),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword ? Icons.visibility_off : Icons.visibility,
                     color: const Color(0xFF94A3B8),
+                    size: isMobile ? 18 : 22,
                   ),
                   onPressed: () {
                     setState(() {
@@ -612,6 +675,8 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                     });
                   },
                 ),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: isMobile ? 12 : 16),
                 filled: true,
                 fillColor: inputFillColor,
                 border: OutlineInputBorder(
@@ -622,13 +687,17 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: borderColor),
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: widget.themeColor, width: 1.6),
+                ),
               ),
               validator: (v) => v!.isEmpty ? 'Enter password' : null,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: isMobile ? (isCompactHeight ? 12 : 16) : 24),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: isMobile ? 44 : 50,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
@@ -648,40 +717,40 @@ class _RoleLoginScreenState extends ConsumerState<RoleLoginScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Row(
+                    : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'LOGIN',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: isMobile ? 14 : 16,
                               letterSpacing: 1,
                             ),
                           ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 18),
+                          const SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: isMobile ? 16 : 18),
                         ],
                       ),
               ),
             ),
-            const SizedBox(height: 24),
-            const Row(
+            SizedBox(height: isMobile ? 12 : 24),
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.verified_user_outlined,
-                  size: 16,
-                  color: Color(0xFF64748B),
+                  size: isMobile ? 13 : 16,
+                  color: const Color(0xFF64748B),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Text(
                   'Secure Access. Authorized Personnel Only.',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  style: TextStyle(color: const Color(0xFF64748B), fontSize: isMobile ? 10.5 : 12),
                 ),
               ],
             ),
-            if (!kIsWeb) ...[
+            if (!kIsWeb && !isMobile) ...[
               const SizedBox(height: 16),
               Center(
                 child: TextButton.icon(

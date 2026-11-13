@@ -41,41 +41,44 @@ class KotReceiptPreviewModal extends StatelessWidget {
               const Divider(thickness: 1.2, color: Colors.black26),
 
               // Items
-              ListView.builder(
-                shrinkWrap: true,
-                itemCount: ticket.items.length,
-                itemBuilder: (context, idx) {
-                  final it = ticket.items[idx];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${it.quantity}x',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                it.name,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                              ),
-                              if (it.notes != null)
-                                Text(
-                                  '** ${it.notes} **',
-                                  style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFFEF4444)),
-                                ),
-                            ],
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: ticket.items.length,
+                  itemBuilder: (context, idx) {
+                    final it = ticket.items[idx];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${it.quantity}x',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  it.name,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                ),
+                                if (it.notes != null)
+                                  Text(
+                                    '** ${it.notes} **',
+                                    style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFFEF4444)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
               const Divider(thickness: 1.2, color: Colors.black26),
               const SizedBox(height: 6),
@@ -86,9 +89,15 @@ class KotReceiptPreviewModal extends StatelessWidget {
                     'Time: ${ticket.createdAt.hour.toString().padLeft(2, '0')}:${ticket.createdAt.minute.toString().padLeft(2, '0')}',
                     style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                   ),
-                  Text(
-                    'Server: ${ticket.serverName ?? 'POS'}',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Server: ${ticket.serverName ?? 'POS'}',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

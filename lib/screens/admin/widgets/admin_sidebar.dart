@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class AdminSidebar extends StatelessWidget {
   final bool isDark;
   final bool isCollapsed;
+  final bool isDrawer;
   final int selectedIndex;
   final ValueChanged<int> onSelectIndex;
   final VoidCallback onToggleCollapse;
@@ -16,6 +17,7 @@ class AdminSidebar extends StatelessWidget {
     super.key,
     required this.isDark,
     required this.isCollapsed,
+    this.isDrawer = false,
     required this.selectedIndex,
     required this.onSelectIndex,
     required this.onToggleCollapse,
@@ -28,14 +30,15 @@ class AdminSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = isCollapsed ? 76.0 : 250.0;
+    final effectiveCollapsed = isDrawer ? false : isCollapsed;
+    final width = isDrawer ? double.infinity : (effectiveCollapsed ? 76.0 : 250.0);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: width,
       decoration: BoxDecoration(
         color: sidebarBg,
-        border: Border(right: BorderSide(color: borderColor, width: 1)),
+        border: isDrawer ? null : Border(right: BorderSide(color: borderColor, width: 1)),
       ),
       child: SafeArea(
         child: Column(
@@ -44,7 +47,7 @@ class AdminSidebar extends StatelessWidget {
             Container(
               height: 72,
               padding: EdgeInsets.symmetric(
-                horizontal: isCollapsed ? 12 : 20,
+                horizontal: effectiveCollapsed ? 12 : 20,
                 vertical: 14,
               ),
               decoration: BoxDecoration(
@@ -53,9 +56,9 @@ class AdminSidebar extends StatelessWidget {
               child: Center(
                 child: Image.asset(
                   isDark ? 'assets/LOGO_DM.png' : 'assets/LOGO.png',
-                  height: isCollapsed ? 36 : 46,
+                  height: effectiveCollapsed ? 36 : 46,
                   fit: BoxFit.contain,
-                  alignment: isCollapsed ? Alignment.center : Alignment.centerLeft,
+                  alignment: effectiveCollapsed ? Alignment.center : Alignment.centerLeft,
                   errorBuilder: (_, __, ___) => Container(
                     height: 38,
                     width: 38,
@@ -100,42 +103,43 @@ class AdminSidebar extends StatelessWidget {
             ),
 
             // COLLAPSE TOGGLE
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: InkWell(
-                onTap: onToggleCollapse,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: isCollapsed
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (!isCollapsed)
-                        Expanded(
-                          child: Text(
-                            'Collapse Menu',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtitleColor),
-                            overflow: TextOverflow.ellipsis,
+            if (!isDrawer)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: InkWell(
+                  onTap: onToggleCollapse,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: effectiveCollapsed
+                          ? MainAxisAlignment.center
+                          : MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (!effectiveCollapsed)
+                          Expanded(
+                            child: Text(
+                              'Collapse Menu',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtitleColor),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                        Icon(
+                          effectiveCollapsed
+                              ? Icons.chevron_right_rounded
+                              : Icons.chevron_left_rounded,
+                          size: 20,
+                          color: subtitleColor,
                         ),
-                      Icon(
-                        isCollapsed
-                            ? Icons.chevron_right_rounded
-                            : Icons.chevron_left_rounded,
-                        size: 20,
-                        color: subtitleColor,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
 
             // LOGOUT BUTTON
             Padding(
@@ -146,7 +150,7 @@ class AdminSidebar extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     vertical: 10,
-                    horizontal: isCollapsed ? 0 : 12,
+                    horizontal: effectiveCollapsed ? 0 : 12,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF4444).withValues(alpha: 0.1),
@@ -157,12 +161,12 @@ class AdminSidebar extends StatelessWidget {
                     ),
                   ),
                   child: Row(
-                    mainAxisAlignment: isCollapsed
+                    mainAxisAlignment: effectiveCollapsed
                         ? MainAxisAlignment.center
                         : MainAxisAlignment.start,
                     children: [
                       const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
-                      if (!isCollapsed) ...[
+                      if (!effectiveCollapsed) ...[
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
@@ -193,10 +197,11 @@ class AdminSidebar extends StatelessWidget {
     required String title,
     required String subtitle,
   }) {
+    final effectiveCollapsed = isDrawer ? false : isCollapsed;
     final isSelected = selectedIndex == index;
 
     return Tooltip(
-      message: isCollapsed ? title : '',
+      message: effectiveCollapsed ? title : '',
       child: InkWell(
         onTap: () => onSelectIndex(index),
         borderRadius: BorderRadius.circular(10),
@@ -204,7 +209,7 @@ class AdminSidebar extends StatelessWidget {
           duration: const Duration(milliseconds: 160),
           padding: EdgeInsets.symmetric(
             vertical: 10,
-            horizontal: isCollapsed ? 0 : 10,
+            horizontal: effectiveCollapsed ? 0 : 10,
           ),
           decoration: BoxDecoration(
             color: isSelected
@@ -219,7 +224,7 @@ class AdminSidebar extends StatelessWidget {
             ),
           ),
           child: Row(
-            mainAxisAlignment: isCollapsed
+            mainAxisAlignment: effectiveCollapsed
                 ? MainAxisAlignment.center
                 : MainAxisAlignment.start,
             children: [
@@ -230,7 +235,7 @@ class AdminSidebar extends StatelessWidget {
                     ? const Color(0xFF6366F1)
                     : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
               ),
-              if (!isCollapsed) ...[
+              if (!effectiveCollapsed) ...[
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

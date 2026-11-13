@@ -131,6 +131,12 @@ class PosOrderActionController {
       );
 
       if (updateRes != null) {
+        try {
+          await RestaurantPosService.transitionOrderStatus(
+            orderId: posState.activeOrderId!,
+            targetStatus: 'SENT_TO_KITCHEN',
+          );
+        } catch (_) {}
         final orderNum = posState.activeOrderNumber ?? 'Order';
         final tableId = posState.selectedTableId;
         // Mark existing items as DONE / SERVED and only new delta items as uncompleted
@@ -282,6 +288,13 @@ class PosOrderActionController {
         newItems: itemsToSend,
         expectedVersion: posState.activeOrderVersion ?? 1,
       );
+
+      try {
+        await RestaurantPosService.transitionOrderStatus(
+          orderId: posState.activeOrderId!,
+          targetStatus: 'SENT_TO_KITCHEN',
+        );
+      } catch (_) {}
 
       final orderNum = posState.activeOrderNumber ?? 'ORD';
       final kotNum = 'KOT-${orderNum.replaceAll("#", "")}';
@@ -497,6 +510,12 @@ class PosOrderActionController {
             newItems: deltaItems,
             expectedVersion: posState.activeOrderVersion ?? 1,
           );
+          try {
+            await RestaurantPosService.transitionOrderStatus(
+              orderId: orderId,
+              targetStatus: 'SENT_TO_KITCHEN',
+            );
+          } catch (_) {}
           ref.read(kitchenDisplayProvider.notifier).resetTicketForNewItems(orderId);
           ref.read(restaurantOrderProvider.notifier).loadOrders();
           ref.read(restaurantTableProvider.notifier).loadTables();

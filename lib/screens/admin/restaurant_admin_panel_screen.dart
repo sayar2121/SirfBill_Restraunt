@@ -21,6 +21,7 @@ class RestaurantAdminPanelScreen extends ConsumerStatefulWidget {
 }
 
 class _RestaurantAdminPanelScreenState extends ConsumerState<RestaurantAdminPanelScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
   bool _isSidebarCollapsed = false;
 
@@ -273,6 +274,10 @@ class _RestaurantAdminPanelScreenState extends ConsumerState<RestaurantAdminPane
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 768;
+    final isTablet = screenWidth >= 768 && screenWidth < 1024;
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final sidebarBg = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -281,101 +286,133 @@ class _RestaurantAdminPanelScreenState extends ConsumerState<RestaurantAdminPane
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: Row(
-        children: [
-          // 1. REUSABLE SIDEBAR COMPONENT
-          AdminSidebar(
-            isDark: isDark,
-            isCollapsed: _isSidebarCollapsed,
-            selectedIndex: _selectedIndex,
-            onSelectIndex: (idx) => setState(() => _selectedIndex = idx),
-            onToggleCollapse: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-            onLogout: _handleLogout,
-            sidebarBg: sidebarBg,
-            borderColor: borderColor,
-            textColor: textColor,
-            subtitleColor: subtitleColor,
-          ),
+    final workspaceContent = Column(
+      children: [
+        // TOP HEADER COMPONENT
+        AdminTopHeader(
+          selectedIndex: _selectedIndex,
+          onRefresh: _loadAdminData,
+          onLaunchPos: () => context.go('/counter/billing'),
+          onLogout: _handleLogout,
+          userName: _userName,
+          cardBg: cardBg,
+          borderColor: borderColor,
+          textColor: textColor,
+          subtitleColor: subtitleColor,
+          isMobile: isMobile,
+          isTablet: isTablet,
+          onOpenDrawer: isMobile ? () => _scaffoldKey.currentState?.openDrawer() : null,
+        ),
 
-          // 2. MAIN WORKSPACE CONTENT
-          Expanded(
-            child: Column(
+        // WORKSPACE TABS VIEW
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                )
+              : IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    // TAB 0: DASHBOARD
+                    AdminDashboardTab(
+                      branches: _branches,
+                      staffCount: _staffUsers.length,
+                      onAddBranch: _showAddBranchDialog,
+                      onAddUser: _showAddUserDialog,
+                      onViewAllBranches: () => setState(() => _selectedIndex = 1),
+                      cardBg: cardBg,
+                      borderColor: borderColor,
+                      textColor: textColor,
+                      subtitleColor: subtitleColor,
+                      isDark: isDark,
+                    ),
+
+                    // TAB 1: OUTLETS & BRANCHES
+                    AdminOutletsTab(
+                      branches: _branches,
+                      onAddBranch: _showAddBranchDialog,
+                      onEditBranch: _showEditBranchDialog,
+                      onDeleteBranch: _handleDeleteBranch,
+                      onSelectActiveBranch: _handleSelectActiveBranch,
+                      activeShopId: _activeShopId,
+                      cardBg: cardBg,
+                      borderColor: borderColor,
+                      textColor: textColor,
+                      subtitleColor: subtitleColor,
+                      isDark: isDark,
+                    ),
+
+                    // TAB 2: USERS & ROLES
+                    AdminUsersTab(
+                      staffUsers: _staffUsers,
+                      searchQuery: _searchQuery,
+                      onSearchChanged: (val) => setState(() => _searchQuery = val),
+                      onAddUser: _showAddUserDialog,
+                      onEditUser: _showEditUserDialog,
+                      onDeleteUser: _handleDeleteUser,
+                      cardBg: cardBg,
+                      borderColor: borderColor,
+                      textColor: textColor,
+                      subtitleColor: subtitleColor,
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: bg,
+      drawer: isMobile
+          ? Drawer(
+              width: 280,
+              backgroundColor: sidebarBg,
+              child: AdminSidebar(
+                isDark: isDark,
+                isCollapsed: false,
+                isDrawer: true,
+                selectedIndex: _selectedIndex,
+                onSelectIndex: (idx) {
+                  setState(() => _selectedIndex = idx);
+                  Navigator.pop(context);
+                },
+                onToggleCollapse: () {},
+                onLogout: () {
+                  Navigator.pop(context);
+                  _handleLogout();
+                },
+                sidebarBg: sidebarBg,
+                borderColor: borderColor,
+                textColor: textColor,
+                subtitleColor: subtitleColor,
+              ),
+            )
+          : null,
+      body: isMobile
+          ? SafeArea(top: false, child: workspaceContent)
+          : Row(
               children: [
-                // TOP HEADER COMPONENT
-                AdminTopHeader(
+                // 1. REUSABLE SIDEBAR COMPONENT (Compact on tablet, collapsible on desktop)
+                AdminSidebar(
+                  isDark: isDark,
+                  isCollapsed: isTablet ? true : _isSidebarCollapsed,
+                  isDrawer: false,
                   selectedIndex: _selectedIndex,
-                  onRefresh: _loadAdminData,
-                  onLaunchPos: () => context.go('/counter/billing'),
+                  onSelectIndex: (idx) => setState(() => _selectedIndex = idx),
+                  onToggleCollapse: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
                   onLogout: _handleLogout,
-                  userName: _userName,
-                  cardBg: cardBg,
+                  sidebarBg: sidebarBg,
                   borderColor: borderColor,
                   textColor: textColor,
                   subtitleColor: subtitleColor,
                 ),
 
-                // WORKSPACE TABS VIEW
-                Expanded(
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-                        )
-                      : IndexedStack(
-                          index: _selectedIndex,
-                          children: [
-                            // TAB 0: DASHBOARD
-                            AdminDashboardTab(
-                              branches: _branches,
-                              staffCount: _staffUsers.length,
-                              onAddBranch: _showAddBranchDialog,
-                              onAddUser: _showAddUserDialog,
-                              onViewAllBranches: () => setState(() => _selectedIndex = 1),
-                              cardBg: cardBg,
-                              borderColor: borderColor,
-                              textColor: textColor,
-                              subtitleColor: subtitleColor,
-                              isDark: isDark,
-                            ),
-
-                            // TAB 1: OUTLETS & BRANCHES
-                            AdminOutletsTab(
-                              branches: _branches,
-                              onAddBranch: _showAddBranchDialog,
-                              onEditBranch: _showEditBranchDialog,
-                              onDeleteBranch: _handleDeleteBranch,
-                              onSelectActiveBranch: _handleSelectActiveBranch,
-                              activeShopId: _activeShopId,
-                              cardBg: cardBg,
-                              borderColor: borderColor,
-                              textColor: textColor,
-                              subtitleColor: subtitleColor,
-                              isDark: isDark,
-                            ),
-
-                            // TAB 2: USERS & ROLES
-                            AdminUsersTab(
-                              staffUsers: _staffUsers,
-                              searchQuery: _searchQuery,
-                              onSearchChanged: (val) => setState(() => _searchQuery = val),
-                              onAddUser: _showAddUserDialog,
-                              onEditUser: _showEditUserDialog,
-                              onDeleteUser: _handleDeleteUser,
-                              cardBg: cardBg,
-                              borderColor: borderColor,
-                              textColor: textColor,
-                              subtitleColor: subtitleColor,
-                              isDark: isDark,
-                            ),
-                          ],
-                        ),
-                ),
+                // 2. MAIN WORKSPACE CONTENT
+                Expanded(child: workspaceContent),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

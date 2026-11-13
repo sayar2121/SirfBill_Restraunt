@@ -31,8 +31,11 @@ class AdminDashboardTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -40,15 +43,16 @@ class AdminDashboardTab extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth > 850;
+              final isNarrow = constraints.maxWidth < 450;
               final crossAxisCount = isWide ? 4 : 2;
 
               return GridView.count(
                 crossAxisCount: crossAxisCount,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: isWide ? 2.1 : 1.7,
+                crossAxisSpacing: isMobile ? 10 : 14,
+                mainAxisSpacing: isMobile ? 10 : 14,
+                childAspectRatio: isWide ? 2.1 : (isNarrow ? 1.40 : 1.7),
                 children: [
                   AdminMetricCard(
                     title: 'Active Outlets',

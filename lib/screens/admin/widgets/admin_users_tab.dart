@@ -40,8 +40,11 @@ class AdminUsersTab extends StatelessWidget {
           u.role.toLowerCase().contains(q);
     }).toList();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -53,12 +56,12 @@ class AdminUsersTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Staff & Role Access (${staffUsers.length})',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: textColor),
+                      'Staff & Roles (${staffUsers.length})',
+                      style: TextStyle(fontSize: isMobile ? 15 : 15, fontWeight: FontWeight.w800, color: textColor),
                     ),
                     Text(
-                      'Assign roles (Super Admin, Store Manager, Cashier, Chef, Inventory Manager)',
-                      style: TextStyle(fontSize: 11, color: subtitleColor),
+                      'Manage staff accounts & permissions',
+                      style: TextStyle(fontSize: isMobile ? 10.5 : 11, color: subtitleColor),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -68,11 +71,11 @@ class AdminUsersTab extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onAddUser,
                 icon: const Icon(Icons.person_add_rounded, size: 15),
-                label: const Text('Add Staff User', style: TextStyle(fontSize: 12)),
+                label: Text(isMobile ? 'Add User' : 'Add Staff User', style: const TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
@@ -192,14 +195,16 @@ class AdminUsersTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${u.username} • Outlet: ${u.branchName ?? 'All Branches'}',
+                              isMobile && u.phone != null && u.phone!.isNotEmpty
+                                  ? '${u.username} • ${u.phone} • ${u.branchName ?? 'All'}'
+                                  : '${u.username} • Outlet: ${u.branchName ?? 'All Branches'}',
                               style: TextStyle(fontSize: 11, color: subtitleColor),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                      if (u.phone != null && u.phone!.isNotEmpty) ...[
+                      if (u.phone != null && u.phone!.isNotEmpty && !isMobile) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

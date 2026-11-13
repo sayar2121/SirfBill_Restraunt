@@ -454,15 +454,19 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
     ];
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final dialogWidth = screenWidth > 900 ? 840.0 : screenWidth * 0.95;
+    final isMobile = screenWidth < 650;
+    final dialogWidth = screenWidth > 900 ? 840.0 : (isMobile ? double.infinity : screenWidth * 0.95);
 
     return Dialog(
       backgroundColor: dialogBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 16 : 24,
+      ),
       child: Container(
         width: dialogWidth,
-        height: 680,
+        height: isMobile ? MediaQuery.of(context).size.height * 0.88 : 680,
         decoration: BoxDecoration(
           color: dialogBg,
           borderRadius: BorderRadius.circular(18),
@@ -493,6 +497,8 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
                         Text(
                           widget.existingBranch != null ? 'Edit Outlet / Branch Profile' : 'Configure New Outlet / Branch',
                           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -650,35 +656,48 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
 
             // FOOTER ACTION BUTTONS
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 12 : 22,
+                vertical: isMobile ? 10 : 14,
+              ),
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: borderColor)),
               ),
               child: Row(
                 children: [
-                  Text(
-                    'Step ${_currentStep + 1} of 5: ${tabs[_currentStep]['title']}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtitleColor),
-                  ),
-                  const Spacer(),
-                  if (_currentStep > 0)
+                  if (!isMobile) ...[
+                    Text(
+                      'Step ${_currentStep + 1} of 5: ${tabs[_currentStep]['title']}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtitleColor),
+                    ),
+                    const Spacer(),
+                  ],
+                  if (_currentStep > 0) ...[
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: textColor,
                         side: BorderSide(color: borderColor),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 12 : 16,
+                          vertical: 11,
+                        ),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => _tabController.animateTo(_currentStep - 1),
                       child: const Text('Back'),
                     ),
-                  const SizedBox(width: 10),
+                    const SizedBox(width: 8),
+                  ],
+                  if (isMobile) const Spacer(),
                   if (_currentStep < 4)
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6366F1),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 14 : 18,
+                          vertical: 11,
+                        ),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => _tabController.animateTo(_currentStep + 1),
@@ -690,7 +709,10 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 14 : 22,
+                          vertical: 11,
+                        ),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: _isSubmitting ? null : _saveOutlet,
@@ -701,9 +723,13 @@ class _AddBranchDialogState extends State<AddBranchDialog> with SingleTickerProv
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.check_circle_rounded, size: 18),
-                      label: Text(_isSubmitting
-                          ? 'Saving...'
-                          : (widget.existingBranch != null ? 'Save Changes' : 'Create & Activate Outlet')),
+                      label: Text(
+                        _isSubmitting
+                            ? 'Saving...'
+                            : (widget.existingBranch != null
+                                ? 'Save Changes'
+                                : (isMobile ? 'Save Outlet' : 'Create & Activate Outlet')),
+                      ),
                     ),
                 ],
               ),
@@ -909,6 +935,7 @@ class _AddStaffUserDialogState extends State<AddStaffUserDialog> {
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
               initialValue: _selectedRole,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Security Role *'),
               items: const [
                 DropdownMenuItem(value: 'admin', child: Text('Super Admin')),
@@ -931,12 +958,16 @@ class _AddStaffUserDialogState extends State<AddStaffUserDialog> {
                 initialValue: (widget.branches!.any((b) => b.id == _selectedBranchId))
                     ? _selectedBranchId
                     : null,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Assigned Outlet / Branch'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('All Branches / Global')),
                   ...widget.branches!.map((b) => DropdownMenuItem(
                         value: b.id,
-                        child: Text('${b.name} (${b.code})'),
+                        child: Text(
+                          '${b.name} (${b.code})',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       )),
                 ],
                 onChanged: (val) {

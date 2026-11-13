@@ -138,6 +138,13 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   static final Map<String, KotStatus> _ticketStatusMap = {};
   // Store time when preparation was started / order accepted
   static final Map<String, DateTime> _prepStartTimeMap = {};
+  // Store served quantities per item key: "${orderId}_${baseItemId}" -> quantity served
+  static final Map<String, int> _servedItemQuantities = {};
+  // Track total item count per order to detect running items added by waiter
+  static final Map<String, int> _orderItemCountMap = {};
+  // Track order IDs with newly added running items awaiting kitchen alert
+  static final Set<String> _updatedOrderIds = {};
+  static final Set<String> _runningItemKeys = {};
   // Track known ticket IDs to detect new incoming tickets and ring alert
   final Set<String> _knownTicketIds = {};
   bool _hasInitialLoaded = false;
@@ -194,10 +201,35 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           }
         }
 
+        // Detect if waiter added running items to an existing order
+        final totalItemCount = order.items.fold<int>(0, (sum, it) => sum + it.quantity);
+        final previousCount = _orderItemCountMap[order.id];
+        final bool hasNewItems = previousCount != null && totalItemCount > previousCount;
+        _orderItemCountMap[order.id] = totalItemCount;
+
+        if (hasNewItems) {
+          _updatedOrderIds.add(order.id);
+          _ticketStatusMap[order.id] = KotStatus.newOrder;
+          _prepStartTimeMap.remove(order.id);
+        } else if (order.status == OrderStatus.active &&
+            (_ticketStatusMap[order.id] == KotStatus.served || _ticketStatusMap[order.id] == KotStatus.ready)) {
+          // If backend transitioned back to SENT_TO_KITCHEN / OPEN, clear stale served status
+          _ticketStatusMap[order.id] = KotStatus.newOrder;
+          _prepStartTimeMap.remove(order.id);
+        }
+
         // Map OrderStatus to KotStatus:
-        // Lifecycle progression: New Order -> In Prep -> Ready -> Served
+        // Prioritize real-time backend order state (READY, SERVED) across all devices!
         KotStatus kotStatus;
-        if (_ticketStatusMap.containsKey(order.id)) {
+        if (order.status == OrderStatus.ready) {
+          // Explicitly marked READY on backend (kitchen cooked it, ready for waiter to serve!)
+          kotStatus = KotStatus.ready;
+          _ticketStatusMap[order.id] = KotStatus.ready;
+        } else if (order.status == OrderStatus.served && !hasNewItems) {
+          // Explicitly marked SERVED on backend
+          kotStatus = KotStatus.served;
+          _ticketStatusMap[order.id] = KotStatus.served;
+        } else if (_ticketStatusMap.containsKey(order.id)) {
           kotStatus = _ticketStatusMap[order.id]!;
         } else {
           final ageHours = DateTime.now().difference(order.createdAt).inHours;
@@ -236,21 +268,94 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
           }
         }
 
-        // Map line items to KotItem
-        final List<KotItem> kotItems = order.items.map((it) {
-          final itemKey = '${order.id}_${it.item.id}';
-          final isExplicitlyPrepared = _preparedItemMap[itemKey];
-          final isPrepared = isExplicitlyPrepared ?? (kotStatus == KotStatus.served);
-          final isRunningItem = _runningItemKeys.contains(itemKey);
-          return KotItem(
-            id: it.item.id,
-            name: it.item.name,
-            quantity: it.quantity,
-            notes: it.notes,
-            isPrepared: isPrepared,
-            isRunningItem: isRunningItem,
-          );
-        }).toList();
+        // Initialize served quantities if order came from backend in served status
+        if (order.status == OrderStatus.served) {
+          for (final it in order.items) {
+            final key = '${order.id}_${it.item.id}';
+            _servedItemQuantities.putIfAbsent(key, () => it.quantity);
+            _preparedItemMap[key] = true;
+          }
+        }
+
+        // Map line items to KotItem with granular tracking of served vs new running items
+        final List<KotItem> kotItems = [];
+        bool hasAnyUnprepared = false;
+
+        for (final it in order.items) {
+          final baseId = it.item.id;
+          final itemKey = '${order.id}_$baseId';
+          final servedQty = _servedItemQuantities[itemKey] ?? 0;
+          final isExplicitlyToggled = _preparedItemMap[itemKey];
+
+          if (kotStatus == KotStatus.served && !hasNewItems) {
+            // Entire order was marked served and no running items were added
+            kotItems.add(KotItem(
+              id: baseId,
+              name: it.item.name,
+              quantity: it.quantity,
+              notes: it.notes,
+              isPrepared: true,
+              isRunningItem: false,
+            ));
+            _servedItemQuantities[itemKey] = it.quantity;
+            _preparedItemMap[itemKey] = true;
+          } else if (servedQty > 0) {
+            if (it.quantity > servedQty) {
+              // Partial quantity was already served, extra quantity is new running items
+              // 1. Portion that was already served:
+              kotItems.add(KotItem(
+                id: '${baseId}_served',
+                name: it.item.name,
+                quantity: servedQty,
+                notes: it.notes,
+                isPrepared: true,
+                isRunningItem: false,
+              ));
+              // 2. Portion that is newly added:
+              kotItems.add(KotItem(
+                id: baseId,
+                name: it.item.name,
+                quantity: it.quantity - servedQty,
+                notes: it.notes,
+                isPrepared: false,
+                isRunningItem: true,
+              ));
+              hasAnyUnprepared = true;
+            } else {
+              // Entire quantity was already served!
+              kotItems.add(KotItem(
+                id: baseId,
+                name: it.item.name,
+                quantity: it.quantity,
+                notes: it.notes,
+                isPrepared: isExplicitlyToggled ?? true,
+                isRunningItem: false,
+              ));
+            }
+          } else {
+            // Brand new item added to the order
+            final isPrep = isExplicitlyToggled ?? false;
+            final isRunning = hasNewItems || _runningItemKeys.contains(itemKey);
+            kotItems.add(KotItem(
+              id: baseId,
+              name: it.item.name,
+              quantity: it.quantity,
+              notes: it.notes,
+              isPrepared: isPrep,
+              isRunningItem: isRunning,
+            ));
+            if (!isPrep) {
+              hasAnyUnprepared = true;
+            }
+          }
+        }
+
+        // If ticket has newly added / unprepared items, ensure its queue status is newOrder
+        if (hasAnyUnprepared && (kotStatus == KotStatus.served || hasNewItems)) {
+          kotStatus = KotStatus.newOrder;
+          _ticketStatusMap[order.id] = KotStatus.newOrder;
+          _prepStartTimeMap.remove(order.id);
+        }
 
         // Server / source display
         String serverName = order.customerName;
@@ -294,14 +399,15 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
         return b.createdAt.compareTo(a.createdAt); // Newest first
       });
 
-      // Detect newly arrived tickets to trigger popup alert and loop audio
+      // Detect newly arrived tickets OR tickets with newly added running items
       KitchenTicket? firstNewTicket;
       if (_hasInitialLoaded) {
         final newlyArrived = mappedTickets.where(
-          (t) => !_knownTicketIds.contains(t.id) && t.status != KotStatus.served,
+          (t) => (!_knownTicketIds.contains(t.id) || _updatedOrderIds.contains(t.id)) && t.status != KotStatus.served,
         ).toList();
         if (newlyArrived.isNotEmpty) {
           firstNewTicket = newlyArrived.first;
+          _updatedOrderIds.remove(firstNewTicket.id);
           if (state.isSoundEnabled) {
             KitchenAudioService.playNewOrderAlert(loop: true);
           }
@@ -400,6 +506,22 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
       _prepStartTimeMap[ticketId] = DateTime.now();
     }
 
+    // When marking ready or served, record all items as completed and update served quantities
+    if (nextStatus == KotStatus.served || nextStatus == KotStatus.ready) {
+      final ticket = state.tickets.where((t) => t.id == ticketId).firstOrNull;
+      if (ticket != null) {
+        for (final it in ticket.items) {
+          final baseId = it.id.replaceAll('_served', '').replaceAll('_new', '');
+          final itemKey = '${ticketId}_$baseId';
+          _preparedItemMap['${ticketId}_${it.id}'] = true;
+          _preparedItemMap[itemKey] = true;
+          _servedItemQuantities[itemKey] = it.quantity;
+          _runningItemKeys.remove('${ticketId}_${it.id}');
+          _runningItemKeys.remove(itemKey);
+        }
+      }
+    }
+
     // Stop audio alert if this ticket was the pending alert
     if (state.pendingAlertTicket?.id == ticketId) {
       KitchenAudioService.stop();
@@ -408,9 +530,13 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
     // 1. Optimistic UI update
     final updated = state.tickets.map((t) {
       if (t.id == ticketId) {
+        final updatedItems = (nextStatus == KotStatus.served || nextStatus == KotStatus.ready)
+            ? t.items.map((it) => it.copyWith(isPrepared: true, isRunningItem: false)).toList()
+            : t.items;
         return t.copyWith(
           status: nextStatus,
           prepStartedAt: _prepStartTimeMap[ticketId] ?? t.prepStartedAt,
+          items: updatedItems,
         );
       }
       return t;
@@ -469,9 +595,11 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
 
   /// Toggle item preparation checkbox
   void toggleItemPrepared(String ticketId, String itemId) {
-    final itemKey = '${ticketId}_$itemId';
+    final baseId = itemId.replaceAll('_served', '').replaceAll('_new', '');
+    final itemKey = '${ticketId}_$baseId';
     final current = _preparedItemMap[itemKey] ?? false;
     _preparedItemMap[itemKey] = !current;
+    _preparedItemMap['${ticketId}_$itemId'] = !current;
 
     final updated = state.tickets.map((t) {
       if (t.id == ticketId) {
@@ -488,8 +616,6 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
     state = state.copyWith(tickets: updated);
   }
 
-  final Set<String> _runningItemKeys = {};
-
   /// Keep already-prepared items marked as DONE when new running items are added to a table order!
   /// Only the newly added items remain unchecked (NEW ADDED) so cooks know exactly what to prepare.
   void markRunningItemsForOrder({
@@ -499,15 +625,21 @@ class KitchenDisplayNotifier extends Notifier<KitchenDisplayState> {
   }) {
     _ticketStatusMap[orderId] = KotStatus.newOrder;
     _prepStartTimeMap.remove(orderId);
+    _updatedOrderIds.add(orderId);
 
     // Keep existing items marked as prepared/done
     for (final id in existingPreparedItemIds) {
-      _preparedItemMap['${orderId}_$id'] = true;
+      final baseId = id.replaceAll('_served', '').replaceAll('_new', '');
+      _preparedItemMap['${orderId}_$baseId'] = true;
+      if (!_servedItemQuantities.containsKey('${orderId}_$baseId')) {
+        _servedItemQuantities['${orderId}_$baseId'] = 1;
+      }
     }
     // Mark newly added items as NOT prepared and flag them as running items
     for (final id in newlyAddedItemIds) {
-      _preparedItemMap['${orderId}_$id'] = false;
-      _runningItemKeys.add('${orderId}_$id');
+      final baseId = id.replaceAll('_served', '').replaceAll('_new', '');
+      _preparedItemMap['${orderId}_$baseId'] = false;
+      _runningItemKeys.add('${orderId}_$baseId');
     }
   }
 

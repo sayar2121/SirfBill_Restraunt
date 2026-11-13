@@ -533,8 +533,8 @@ class RestaurantReportNotifier extends Notifier<RestaurantReportState> {
       // Track items sold
       for (final it in o.items) {
         final dName = it.item.name;
-        final dQty = it.quantity;
-        final dRev = it.totalPrice;
+        final int dQty = it.quantity.toInt();
+        final double dRev = it.totalPrice.toDouble();
         final resolvedCat = _resolveCategory(dName, it.item.categoryId);
 
         totalItemsSold += dQty;

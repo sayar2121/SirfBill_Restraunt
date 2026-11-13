@@ -54,16 +54,26 @@ class Step05StaffPermissionsSection extends StatelessWidget {
           else ...[
             DropdownButtonFormField<String>(
               initialValue: assignedManager,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: 'Assign Outlet Manager',
                 prefixIcon: const Icon(Icons.manage_accounts_rounded, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               items: [
-                const DropdownMenuItem(value: null, child: Text('No Manager Assigned Yet')),
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    'No Manager Assigned Yet',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 ...availableStaff.map((u) => DropdownMenuItem(
                       value: u.id,
-                      child: Text('${u.name} (${u.role.toUpperCase()})'),
+                      child: Text(
+                        '${u.name} (${u.role.toUpperCase()})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     )),
               ],
               onChanged: onAssignedManagerChanged,

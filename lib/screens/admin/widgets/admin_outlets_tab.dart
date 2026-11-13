@@ -49,8 +49,11 @@ class _AdminOutletsTabState extends State<AdminOutletsTab> {
           b.location.toLowerCase().contains(q);
     }).toList();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,12 +66,12 @@ class _AdminOutletsTabState extends State<AdminOutletsTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'All Registered Outlets (${widget.branches.length})',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: widget.textColor),
+                      'All Outlets (${widget.branches.length})',
+                      style: TextStyle(fontSize: isMobile ? 15 : 16, fontWeight: FontWeight.w800, color: widget.textColor),
                     ),
                     Text(
-                      'Manage branches, configure active terminals, and update physical locations',
-                      style: TextStyle(fontSize: 11.5, color: widget.subtitleColor),
+                      'Manage branches & active terminals',
+                      style: TextStyle(fontSize: isMobile ? 10.5 : 11.5, color: widget.subtitleColor),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -77,12 +80,12 @@ class _AdminOutletsTabState extends State<AdminOutletsTab> {
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: widget.onAddBranch,
-                icon: const Icon(Icons.add_business_rounded, size: 16),
-                label: const Text('Add New Outlet', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.add_business_rounded, size: 15),
+                label: Text(isMobile ? 'Add Outlet' : 'Add New Outlet', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                   elevation: 0,
                 ),
@@ -318,13 +321,18 @@ class _AdminOutletsTabState extends State<AdminOutletsTab> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              Icon(Icons.phone_outlined, size: 14, color: widget.subtitleColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                b.contact,
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: widget.subtitleColor),
-                              ),
+                              if (b.contact.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Icon(Icons.phone_outlined, size: 14, color: widget.subtitleColor),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    b.contact,
+                                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: widget.subtitleColor),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 10),

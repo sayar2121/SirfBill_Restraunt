@@ -117,9 +117,9 @@ class RestaurantOrderService {
       int currentVer = expectedVersion ?? 1;
 
       // Helper function to send the PATCH request
-      Future<Response> sendPatch(int ver, {bool includeExpectedVersion = true}) {
+      Future<Response> sendPatch(int ver) {
         final payload = {
-          if (includeExpectedVersion) 'expected_version': ver,
+          'expected_version': ver,
           'lines': linesData,
           'items': linesData,
         };
@@ -129,42 +129,53 @@ class RestaurantOrderService {
 
       Response? res;
       try {
-        res = await sendPatch(currentVer, includeExpectedVersion: true);
+        res = await sendPatch(currentVer);
       } catch (firstErr) {
         if (firstErr is DioException) {
           final sc = firstErr.response?.statusCode;
           debugPrint('PATCH error $sc for order $orderId: ${firstErr.response?.data}');
 
           if (sc == 409) {
-            debugPrint('409 Conflict detected for order $orderId. Fetching latest version from server...');
-            final latestOrder = await fetchOrderById(orderId);
-            if (latestOrder != null && latestOrder['version'] != null) {
-              final serverVer = (latestOrder['version'] is num)
-                  ? (latestOrder['version'] as num).toInt()
-                  : (int.tryParse(latestOrder['version'].toString()) ?? currentVer + 1);
-              debugPrint('Retrying with fetched server version: $serverVer');
-              try {
-                res = await sendPatch(serverVer, includeExpectedVersion: true);
-              } catch (_) {}
+            // Extract exact server version from backend response
+            int? serverVer;
+            final errBody = firstErr.response?.data?.toString() ?? '';
+            final match = RegExp(r'version is (\d+)').firstMatch(errBody);
+            if (match != null) {
+              serverVer = int.tryParse(match.group(1)!);
+              debugPrint('Parsed exact server version from 409 error message: $serverVer');
             }
 
-            if (res == null) {
-              debugPrint('Retrying without expected_version key in payload...');
+            if (serverVer == null) {
+              final allOrders = await fetchOrders();
+              final matchOrd = allOrders.where((o) => o.id == orderId).firstOrNull;
+              if (matchOrd != null) {
+                serverVer = matchOrd.version;
+              }
+            }
+
+            if (serverVer != null) {
+              debugPrint('Retrying PATCH with resolved server version: $serverVer');
               try {
-                res = await sendPatch(currentVer, includeExpectedVersion: false);
-              } catch (_) {}
+                res = await sendPatch(serverVer);
+              } catch (retryErr) {
+                debugPrint('Retry with serverVer $serverVer failed: $retryErr');
+              }
             }
           } else if (sc == 400 || sc == 422 || sc == 405 || sc == 403) {
-            // When order is in SERVED or HOLD status, backend might disallow direct PATCH.
-            // Transition status back to SENT_TO_KITCHEN or OPEN, then retry!
-            debugPrint('Order in completed/served state. Attempting transition to SENT_TO_KITCHEN...');
+            // When order is in SERVED, HOLD, or READY status, backend might disallow direct PATCH.
+            // Transition status back to SENT_TO_KITCHEN first, then retry!
+            debugPrint('Order in completed/served/ready state. Attempting transition to SENT_TO_KITCHEN...');
             try {
               await _dio.post(
                 '/api/restaurant/orders/$orderId/transitions',
                 queryParameters: {'payload': 'SENT_TO_KITCHEN'},
                 data: {'target_status': 'SENT_TO_KITCHEN', 'status': 'SENT_TO_KITCHEN'},
               );
-              res = await sendPatch(currentVer, includeExpectedVersion: false);
+              // Fetch latest version again because transition increments the version
+              final allOrders = await fetchOrders();
+              final matchOrd = allOrders.where((o) => o.id == orderId).firstOrNull;
+              final retryVer = matchOrd?.version ?? (currentVer + 1);
+              res = await sendPatch(retryVer);
             } catch (trErr) {
               debugPrint('Transition retry failed: $trErr');
             }
@@ -178,9 +189,12 @@ class RestaurantOrderService {
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         try {
-          await _dio.post('/api/restaurant/orders/$orderId/send-to-kitchen');
-        } catch (_) {}
-        // Also ensure order status transitions back to OPEN/SENT_TO_KITCHEN so kitchen displays the running ticket
+          final kotRes = await _dio.post('/api/restaurant/orders/$orderId/send-to-kitchen');
+          debugPrint('send-to-kitchen response: ${kotRes.statusCode}');
+        } catch (kotErr) {
+          debugPrint('send-to-kitchen error: $kotErr');
+        }
+        // Also ensure order status transitions back to SENT_TO_KITCHEN so kitchen displays the running ticket
         try {
           await _dio.post(
             '/api/restaurant/orders/$orderId/transitions',
@@ -252,7 +266,28 @@ class RestaurantOrderService {
             orderType = OrderType.delivery;
           }
 
-          final rawStatus = (json['status'] ?? json['order_status'] ?? 'OPEN').toString().toUpperCase();
+          String rawStatus = (json['status'] ?? json['order_status'] ?? json['kitchen_status'] ?? json['kot_status'] ?? json['state'] ?? 'OPEN').toString().toUpperCase();
+
+          // Check if any attached kitchen tickets/kots are marked READY
+          if (json['kitchen_tickets'] is List) {
+            for (final kt in json['kitchen_tickets']) {
+              final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
+              if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
+                rawStatus = 'READY';
+                break;
+              }
+            }
+          }
+          if (json['kots'] is List) {
+            for (final kt in json['kots']) {
+              final s = (kt['status'] ?? kt['kot_status'] ?? '').toString().toUpperCase();
+              if (s == 'READY' || s.contains('READY') || s == 'FOOD_READY' || s == 'PREPARED') {
+                rawStatus = 'READY';
+                break;
+              }
+            }
+          }
+
           OrderStatus orderStatus = OrderStatus.active;
           if (rawStatus == 'READY' || rawStatus.contains('READY') || rawStatus == 'FOOD_READY' || rawStatus == 'PREPARED') {
             orderStatus = OrderStatus.ready;
@@ -371,6 +406,7 @@ class RestaurantOrderService {
             grandTotal: (rawGrand is num) ? rawGrand.toDouble() : (double.tryParse(rawGrand.toString()) ?? 0.0),
             createdAt: createdAt,
             notes: json['notes']?.toString(),
+            version: (json['version'] is num) ? (json['version'] as num).toInt() : (int.tryParse(json['version']?.toString() ?? '1') ?? 1),
           );
         }).toList();
       }
@@ -387,17 +423,50 @@ class RestaurantOrderService {
   }) async {
     final status = targetStatus.toUpperCase();
 
+    // 1. Try standard state-machine transition endpoint
     try {
       final res = await _dio.post(
         '/api/restaurant/orders/$orderId/transitions',
         queryParameters: {'payload': status},
-        data: {'target_status': status, 'status': status},
+        data: {'target_status': status, 'status': status, 'action': status},
       );
-      return res.statusCode == 200 || res.statusCode == 204;
+      if (res.statusCode == 200 || res.statusCode == 201 || res.statusCode == 204) {
+        return true;
+      }
     } catch (e) {
-      debugPrint('Error transitioning order status on backend: $e');
-      return false;
+      debugPrint('POST /transitions error for $orderId ($status): $e');
     }
+
+    // 2. Fallback: Direct PATCH /api/restaurant/orders/$orderId
+    try {
+      final patchRes = await _dio.patch(
+        '/api/restaurant/orders/$orderId',
+        data: {
+          'status': status,
+          'order_status': status,
+          'kitchen_status': status,
+          'kot_status': status,
+        },
+      );
+      if (patchRes.statusCode == 200 || patchRes.statusCode == 204) {
+        return true;
+      }
+    } catch (patchErr) {
+      debugPrint('PATCH /orders/$orderId fallback error: $patchErr');
+    }
+
+    // 3. Fallback: POST /api/restaurant/orders/$orderId/status
+    try {
+      final statusRes = await _dio.post(
+        '/api/restaurant/orders/$orderId/status',
+        data: {'status': status, 'order_status': status},
+      );
+      if (statusRes.statusCode == 200 || statusRes.statusCode == 204) {
+        return true;
+      }
+    } catch (_) {}
+
+    return false;
   }
 }
 

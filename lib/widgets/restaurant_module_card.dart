@@ -50,15 +50,18 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = constraints.maxWidth;
-        final isCompact = cardWidth < 240;
+        final cardHeight = constraints.maxHeight;
+        final isMobile = cardWidth < 210 || (cardHeight.isFinite && cardHeight < 190);
+        final isCompact = isMobile || cardWidth < 240;
 
-        final double horizontalPadding = isCompact ? 14.0 : 20.0;
-        final double topPadding = isCompact ? 14.0 : 20.0;
-        final double bottomPadding = isCompact ? 14.0 : 20.0;
-        final double iconBoxSize = isCompact ? 40.0 : 48.0;
-        final double iconSize = isCompact ? 22.0 : 26.0;
-        final double titleFontSize = isCompact ? 15.5 : 18.0;
-        final double descFontSize = isCompact ? 11.5 : 12.5;
+        final double horizontalPadding = isMobile ? 12.0 : (isCompact ? 14.0 : 20.0);
+        final double topPadding = isMobile ? 12.0 : (isCompact ? 14.0 : 20.0);
+        final double bottomPadding = isMobile ? 10.0 : (isCompact ? 14.0 : 20.0);
+        final double iconBoxSize = isMobile ? 34.0 : (isCompact ? 40.0 : 48.0);
+        final double iconSize = isMobile ? 18.0 : (isCompact ? 22.0 : 26.0);
+        final double titleFontSize = isMobile ? 13.5 : (isCompact ? 15.5 : 18.0);
+        final double descFontSize = isMobile ? 10.5 : (isCompact ? 11.5 : 12.5);
+        final double cardRadius = isMobile ? 18.0 : 24.0;
 
         return MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -70,7 +73,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
             transform: Matrix4.translationValues(0.0, _isHovered ? -6.0 : 0.0, 0.0),
             decoration: BoxDecoration(
               color: cardColor,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(cardRadius),
               border: Border.all(
                 color: _isHovered
                     ? primaryColor.withValues(alpha: 0.55)
@@ -90,18 +93,18 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(cardRadius),
                 onTap: widget.onTap,
                 child: Stack(
                   children: [
                     // Top-right watermark number (01, 02, etc.)
                     Positioned(
-                      top: isCompact ? 14 : 18,
-                      right: isCompact ? 14 : 20,
+                      top: isMobile ? 10 : (isCompact ? 14 : 18),
+                      right: isMobile ? 12 : (isCompact ? 14 : 20),
                       child: Text(
                         widget.data.indexText,
                         style: TextStyle(
-                          fontSize: isCompact ? 12.5 : 15,
+                          fontSize: isMobile ? 11.5 : (isCompact ? 12.5 : 15),
                           fontWeight: FontWeight.w700,
                           color: primaryColor.withValues(alpha: 0.75),
                           letterSpacing: 0.5,
@@ -126,7 +129,7 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                             height: iconBoxSize,
                             decoration: BoxDecoration(
                               color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.12),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(isMobile ? 10 : 14),
                             ),
                             child: Center(
                               child: Icon(
@@ -136,11 +139,11 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                               ),
                             ),
                           ),
-                          SizedBox(height: isCompact ? 14 : 18),
+                          SizedBox(height: isMobile ? 8 : (isCompact ? 14 : 18)),
 
                           // Title (2-line container for unified alignment across cards)
                           SizedBox(
-                            height: isCompact ? 40 : 46,
+                            height: isMobile ? 34 : (isCompact ? 40 : 46),
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
@@ -151,24 +154,24 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                   fontSize: titleFontSize,
                                   fontWeight: FontWeight.w800,
                                   color: titleColor,
-                                  height: 1.2,
-                                  letterSpacing: -0.3,
+                                  height: 1.15,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: isMobile ? 2 : 4),
 
                           // Description
                           SizedBox(
-                            height: isCompact ? 34 : 40,
+                            height: isMobile ? 14 : (isCompact ? 34 : 40),
                             child: Text(
                               widget.data.description,
-                              maxLines: 2,
+                              maxLines: isMobile ? 1 : 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: descFontSize,
-                                height: 1.35,
+                                height: 1.25,
                                 fontWeight: FontWeight.w500,
                                 color: descColor,
                               ),
@@ -183,8 +186,8 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 14 : 20,
-                                vertical: isCompact ? 7 : 9,
+                                horizontal: isMobile ? 10 : (isCompact ? 14 : 20),
+                                vertical: isMobile ? 5 : (isCompact ? 7 : 9),
                               ),
                               decoration: BoxDecoration(
                                 color: primaryColor,
@@ -205,15 +208,15 @@ class _RestaurantModuleCardState extends State<RestaurantModuleCard> {
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
-                                      fontSize: isCompact ? 11.5 : 13,
+                                      fontSize: isMobile ? 10.5 : (isCompact ? 11.5 : 13),
                                       letterSpacing: 0.2,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  SizedBox(width: isMobile ? 3 : 4),
                                   Icon(
                                     Icons.arrow_forward_rounded,
                                     color: Colors.white,
-                                    size: isCompact ? 12 : 14,
+                                    size: isMobile ? 11 : (isCompact ? 12 : 14),
                                   ),
                                 ],
                               ),

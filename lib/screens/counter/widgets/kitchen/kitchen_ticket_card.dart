@@ -204,9 +204,8 @@ class KitchenTicketCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Flexible(
+                Expanded(
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Flexible(
                         child: KitchenOrderTypeBadge(
@@ -232,10 +231,15 @@ class KitchenTicketCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  ticket.serverName ?? 'Staff',
-                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Text(
+                    ticket.serverName ?? 'Staff',
+                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                  ),
                 ),
               ],
             ),

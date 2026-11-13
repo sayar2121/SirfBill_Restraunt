@@ -129,12 +129,12 @@ class Step03OperatingSettingsSection extends StatelessWidget {
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
             children: [
               AdminFormFieldWidgets.buildChannelChip('Dine-In', enableDineIn, onEnableDineInChanged),
-              const SizedBox(width: 12),
               AdminFormFieldWidgets.buildChannelChip('Takeaway', enableTakeaway, onEnableTakeawayChanged),
-              const SizedBox(width: 12),
               AdminFormFieldWidgets.buildChannelChip('Delivery', enableDelivery, onEnableDeliveryChanged),
             ],
           ),
