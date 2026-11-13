@@ -6,8 +6,11 @@ import 'package:file_saver/file_saver.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../models/restaurant_pos_models.dart';
+import '../../../../services/shop_service.dart';
+import '../../../../services/shop_settings_service.dart';
 import '../../../../widgets/common_filter_pills.dart';
 
 class KitchenReportExportHelper {
@@ -16,6 +19,8 @@ class KitchenReportExportHelper {
     required List<KitchenTicket> tickets,
     required DateRangePreset datePreset,
     DateTimeRange? customRange,
+    String? restaurantName,
+    String? outletLocation,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final periodLabel = _formatPeriod(datePreset, customRange);
@@ -41,7 +46,9 @@ class KitchenReportExportHelper {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Export Kitchen Display Data',
+                          (restaurantName != null && restaurantName.trim().isNotEmpty)
+                              ? restaurantName.trim()
+                              : 'Export Kitchen Display Data',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -50,7 +57,7 @@ class KitchenReportExportHelper {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Filter: $periodLabel (${tickets.length} tickets)',
+                          '${(outletLocation != null && outletLocation.trim().isNotEmpty) ? "${outletLocation.trim()} • " : ""}Filter: $periodLabel (${tickets.length} tickets)',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? Colors.grey[400] : const Color(0xFF64748B),
@@ -78,7 +85,13 @@ class KitchenReportExportHelper {
                         isDark: isDark,
                         onTap: () async {
                           Navigator.pop(ctx);
-                          await _exportToExcel(context, tickets, periodLabel);
+                          await _exportToExcel(
+                            context,
+                            tickets,
+                            periodLabel,
+                            restaurantName: restaurantName,
+                            outletLocation: outletLocation,
+                          );
                         },
                       ),
                     ),
@@ -93,7 +106,13 @@ class KitchenReportExportHelper {
                         isDark: isDark,
                         onTap: () async {
                           Navigator.pop(ctx);
-                          await _exportToPdf(context, tickets, periodLabel);
+                          await _exportToPdf(
+                            context,
+                            tickets,
+                            periodLabel,
+                            restaurantName: restaurantName,
+                            outletLocation: outletLocation,
+                          );
                         },
                       ),
                     ),
@@ -188,12 +207,86 @@ class KitchenReportExportHelper {
     );
   }
 
+  static Future<Map<String, String>> _resolveRestaurantInfo({
+    String? passedName,
+    String? passedLocation,
+  }) async {
+    String name = (passedName ?? '').trim();
+    String location = (passedLocation ?? '').trim();
+
+    if (name.isNotEmpty && location.isNotEmpty) {
+      return {'name': name, 'location': location};
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (name.isEmpty) {
+        name = (prefs.getString('assigned_outlet_name') ?? '').trim();
+      }
+
+      final currentShopId = prefs.getString('selected_shop_id') ??
+          prefs.getString('assigned_outlet_id');
+
+      if (currentShopId != null && currentShopId.isNotEmpty) {
+        try {
+          final shops = await ShopService.getShops();
+          final matched = shops.where((s) => s.id == currentShopId).firstOrNull ?? shops.firstOrNull;
+          if (matched != null) {
+            if (name.isEmpty && matched.name.isNotEmpty) {
+              name = matched.name.trim();
+            }
+            if (location.isEmpty) {
+              location = matched.city.isNotEmpty
+                  ? matched.city.trim()
+                  : (matched.location.isNotEmpty ? matched.location.trim() : '');
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (name.isEmpty) {
+        name = (prefs.getString('shop_name') ?? '').trim();
+      }
+
+      if (name.isEmpty) {
+        try {
+          final settings = await ShopSettingsService.getSettings();
+          final n = settings['shop_name']?.toString();
+          if (n != null && n.trim().isNotEmpty) {
+            name = n.trim();
+          }
+          if (location.isEmpty) {
+            final loc = settings['city']?.toString() ?? settings['address']?.toString();
+            if (loc != null && loc.trim().isNotEmpty) {
+              location = loc.trim();
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    if (name.isEmpty) {
+      name = 'SirfBill Restaurant';
+    }
+
+    return {'name': name, 'location': location};
+  }
+
   static Future<void> _exportToExcel(
     BuildContext context,
     List<KitchenTicket> tickets,
-    String periodLabel,
-  ) async {
+    String periodLabel, {
+    String? restaurantName,
+    String? outletLocation,
+  }) async {
     try {
+      final info = await _resolveRestaurantInfo(
+        passedName: restaurantName,
+        passedLocation: outletLocation,
+      );
+      final resolvedName = info['name'] ?? 'SirfBill Restaurant';
+      final resolvedLocation = info['location'] ?? '';
+
       final excel = Excel.createExcel();
       const sheetName = 'Kitchen Tickets';
       final sheet = excel[sheetName];
@@ -201,10 +294,14 @@ class KitchenReportExportHelper {
 
       // Title & Period headers
       sheet.appendRow([
-        TextCellValue('SirfBill Restaurant - Kitchen Display System Report'),
+        TextCellValue('$resolvedName - Kitchen Display System Report'),
       ]);
       sheet.appendRow([
-        TextCellValue('Period: $periodLabel | Exported on: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}'),
+        TextCellValue([
+          if (resolvedLocation.isNotEmpty) 'Outlet: $resolvedLocation',
+          'Period: $periodLabel',
+          'Exported on: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+        ].join(' | ')),
       ]);
       sheet.appendRow([
         TextCellValue('Total Tickets: ${tickets.length}'),
@@ -294,9 +391,18 @@ class KitchenReportExportHelper {
   static Future<void> _exportToPdf(
     BuildContext context,
     List<KitchenTicket> tickets,
-    String periodLabel,
-  ) async {
+    String periodLabel, {
+    String? restaurantName,
+    String? outletLocation,
+  }) async {
     try {
+      final info = await _resolveRestaurantInfo(
+        passedName: restaurantName,
+        passedLocation: outletLocation,
+      );
+      final resolvedName = info['name'] ?? 'SirfBill Restaurant';
+      final resolvedLocation = info['location'] ?? '';
+
       final pdf = pw.Document();
       final nowFormatted = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
 
@@ -318,14 +424,35 @@ class KitchenReportExportHelper {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(
-                        'SirfBill Restaurant - Kitchen Display System',
-                        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                      pw.Row(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        children: [
+                          pw.Text(
+                            resolvedName,
+                            style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blueGrey900,
+                            ),
+                          ),
+                          pw.Text(
+                            ' - Kitchen Display System',
+                            style: pw.TextStyle(
+                              fontSize: 14,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.indigo900,
+                            ),
+                          ),
+                        ],
                       ),
-                      pw.SizedBox(height: 2),
+                      pw.SizedBox(height: 3),
                       pw.Text(
-                        'Period: $periodLabel  |  Exported: $nowFormatted',
-                        style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                        [
+                          if (resolvedLocation.isNotEmpty) 'Outlet: $resolvedLocation',
+                          'Period: $periodLabel',
+                          'Exported: $nowFormatted',
+                        ].join('  |  '),
+                        style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700),
                       ),
                     ],
                   ),

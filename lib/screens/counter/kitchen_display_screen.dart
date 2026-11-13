@@ -249,6 +249,8 @@ class _KitchenDisplayScreenState extends ConsumerState<KitchenDisplayScreen> {
                 tickets: tickets,
                 datePreset: kdsState.datePreset,
                 customRange: kdsState.customRange,
+                restaurantName: _restaurantName,
+                outletLocation: _outletLocation,
               );
             },
           ),
