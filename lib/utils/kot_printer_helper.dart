@@ -386,7 +386,8 @@ class KotPrinterHelper {
     // Exact match to the official backend thermal tax invoice
     final double cgstVal = tax > 0 ? (tax / 2) : 0.0;
     final double sgstVal = tax > 0 ? (tax / 2) : 0.0;
-    final billHeightMm = (130.0 + (consolidatedItems.length * 8.5) + (upiId.isNotEmpty ? 35.0 : 0.0)).clamp(145.0, 380.0);
+    final int totalBillQty = consolidatedItems.fold<int>(0, (sum, ci) => sum + ci.quantity);
+    final billHeightMm = (135.0 + (consolidatedItems.length * 8.5) + (upiId.isNotEmpty ? 35.0 : 0.0)).clamp(150.0, 390.0);
     final billPageFormat = PdfPageFormat(80 * PdfPageFormat.mm, billHeightMm * PdfPageFormat.mm, marginAll: 4 * PdfPageFormat.mm);
 
     pdf.addPage(
@@ -538,6 +539,14 @@ class KotPrinterHelper {
               pw.SizedBox(height: 2),
 
               // Summary Section
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Qty:', style: const pw.TextStyle(fontSize: 8)),
+                  pw.Text('$totalBillQty', style: const pw.TextStyle(fontSize: 8)),
+                ],
+              ),
+              pw.SizedBox(height: 1),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [

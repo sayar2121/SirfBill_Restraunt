@@ -30,6 +30,15 @@ class PdfThermalGenerator {
   }) async {
     final pdf = pw.Document(theme: theme);
     final displayCin = cinNumber.isNotEmpty ? cinNumber : drugLicence;
+    final double totalQuantity = items.fold<double>(0.0, (sum, item) {
+      final val = item['quantity'] ?? item['qty'];
+      if (val is num) return sum + val.toDouble();
+      if (val is String) return sum + (double.tryParse(val) ?? 0.0);
+      return sum;
+    });
+    final String totalQtyStr = totalQuantity % 1 == 0
+        ? totalQuantity.toInt().toString()
+        : totalQuantity.toStringAsFixed(2);
 
     pdf.addPage(
       pw.Page(
@@ -282,6 +291,20 @@ class PdfThermalGenerator {
               pw.SizedBox(height: 5),
 
               // Totals
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Total Qty:',
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                  pw.Text(
+                    totalQtyStr,
+                    style: const pw.TextStyle(fontSize: 8),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
